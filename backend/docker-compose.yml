@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  common-service:
+    build: ./services/common-service
+    container_name: common-service
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./services/common-service/.env
+    depends_on:
+      - mongodb-common
+
+  appointment-service:
+    build: ./services/appointment-service
+    container_name: appointment-service
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./services/appointment-service/.env
+    depends_on:
+      - mongodb-appointment
+      - common-service
+
+  doctor-service:
+    build: ./services/doctor-service
+    container_name: doctor-service
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./services/doctor-service/.env
+    depends_on:
+      - mongodb-doctor
+
+  patient-service:
+    build: ./services/patient-service
+    container_name: patient-service
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./services/patient-service/.env
+    depends_on:
+      - mongodb-patient
+
+  mongodb-common:
+    image: mongo:7
+    container_name: mongodb-common
+    restart: unless-stopped
+    volumes:
+      - mongo-common-data:/data/db
+
+  mongodb-appointment:
+    image: mongo:7
+    container_name: mongodb-appointment
+    restart: unless-stopped
+    volumes:
+      - mongo-appointment-data:/data/db
+
+  mongodb-doctor:
+    image: mongo:7
+    container_name: mongodb-doctor
+    restart: unless-stopped
+    volumes:
+      - mongo-doctor-data:/data/db
+
+  mongodb-patient:
+    image: mongo:7
+    container_name: mongodb-patient
+    restart: unless-stopped
+    volumes:
+      - mongo-patient-data:/data/db
+
+volumes:
+  mongo-common-data:
+  mongo-appointment-data:
+  mongo-doctor-data:
+  mongo-patient-data:
