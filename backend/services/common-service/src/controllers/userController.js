@@ -5,7 +5,8 @@ const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
 
 const updateSchema = Joi.object({
-  fullName: Joi.string().min(2).max(120).optional(),
+  firstName: Joi.string().min(2).max(60).optional(),
+  lastName: Joi.string().min(2).max(60).optional(),
   phoneNumber: Joi.string().allow('', null).optional()
 }).min(1);
 
@@ -37,12 +38,26 @@ const updateUserById = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.FORBIDDEN, 'You can only update your own profile');
   }
 
-  Object.assign(user, value);
+  if (value.firstName !== undefined) {
+    user.firstName = value.firstName.trim();
+  }
+
+  if (value.lastName !== undefined) {
+    user.lastName = value.lastName.trim();
+  }
+
+  if (value.phoneNumber !== undefined) {
+    user.phoneNumber = value.phoneNumber;
+  }
+
+  user.fullName = `${user.firstName} ${user.lastName}`.trim();
   await user.save();
 
   return res.status(StatusCodes.OK).json({
     id: user._id,
     email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
     fullName: user.fullName,
     role: user.role,
     phoneNumber: user.phoneNumber

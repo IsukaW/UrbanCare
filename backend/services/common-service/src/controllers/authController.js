@@ -10,7 +10,8 @@ const { asyncHandler } = require('../utils/asyncHandler');
 const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).max(64).required(),
-  fullName: Joi.string().min(2).max(120).required(),
+  firstName: Joi.string().min(2).max(60).required(),
+  lastName: Joi.string().min(2).max(60).required(),
   role: Joi.string().valid('admin', 'doctor', 'patient').required(),
   phoneNumber: Joi.string().optional()
 });
@@ -43,10 +44,14 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(value.password, 12);
+  const firstName = value.firstName.trim();
+  const lastName = value.lastName.trim();
   const user = await User.create({
     email: value.email.toLowerCase(),
     passwordHash,
-    fullName: value.fullName,
+    firstName,
+    lastName,
+    fullName: `${firstName} ${lastName}`.trim(),
     role: value.role,
     phoneNumber: value.phoneNumber
   });
@@ -57,6 +62,8 @@ const register = asyncHandler(async (req, res) => {
     user: {
       id: user._id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       fullName: user.fullName,
       role: user.role,
       phoneNumber: user.phoneNumber
@@ -88,6 +95,8 @@ const login = asyncHandler(async (req, res) => {
     user: {
       id: user._id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       fullName: user.fullName,
       role: user.role,
       phoneNumber: user.phoneNumber
