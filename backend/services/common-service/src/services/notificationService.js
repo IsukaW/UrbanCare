@@ -1,4 +1,3 @@
-const twilio = require('twilio');
 const sgMail = require('@sendgrid/mail');
 const nodemailer = require('nodemailer');
 const { env } = require('../config/env');
@@ -30,14 +29,11 @@ const brevoTransporter = isBrevoSmtpKey(env.SENDGRID_API_KEY)
     })
   : null;
 
-const getTwilioClient = () => {
-  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_API_KEY || !env.TWILIO_API_SECRET) {
-    return null;
-  }
+const getSmsApiUrl = () => `${env.SMSAPI_LK_BASE_URL.replace(/\/+$/, '')}/api/v3/sms/send`;
 
-  return twilio(env.TWILIO_API_KEY, env.TWILIO_API_SECRET, {
-    accountSid: env.TWILIO_ACCOUNT_SID
-  });
+const getSmsApiToken = () => {
+  const raw = env.SMSAPI_LK_TOKEN || '';
+  return raw.replace(/^Authorization:\s*/i, '').replace(/^Bearer\s+/i, '').trim();
 };
 
 const sendEmail = async ({ to, subject, text, html }) => {
@@ -75,18 +71,54 @@ const sendEmail = async ({ to, subject, text, html }) => {
 };
 
 const sendSms = async ({ to, body }) => {
-  const client = getTwilioClient();
-  if (!client || !env.TWILIO_FROM_NUMBER) {
-    throw new Error('Twilio is not configured');
+  const token = getSmsApiToken();
+  if (!token || !env.SMSAPI_LK_SENDER_ID) {
+    throw new Error('SMSAPI.LK is not configured: set SMSAPI_LK_TOKEN and SMSAPI_LK_SENDER_ID');
   }
 
-  const response = await client.messages.create({
-    to,
-    from: env.TWILIO_FROM_NUMBER,
-    body
+  const requestBody = {
+    recipient: to,
+    sender_id: env.SMSAPI_LK_SENDER_ID,
+    type: env.SMSAPI_LK_MESSAGE_TYPE,
+    message: body
+  };
+
+  const response = await fetch(getSmsApiUrl(), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
   });
 
-  logger.info({ sid: response.sid, to }, 'SMS notification sent');
+  const responseText = await response.text();
+  let responseData;
+  try {
+    responseData = responseText ? JSON.parse(responseText) : null;
+  } catch (error) {
+    responseData = { raw: responseText };
+  }
+
+  if (!response.ok) {
+    logger.error(
+      {
+        to,
+        statusCode: response.status,
+        providerResponse: responseData
+      },
+      'SMSAPI.LK send failed'
+    );
+    throw new Error(`SMSAPI.LK request failed with status ${response.status}`);
+  }
+
+  logger.info({ to, statusCode: response.status, provider: 'smsapi.lk' }, 'SMS notification sent');
+  return {
+    statusCode: response.status,
+    provider: 'smsapi.lk',
+    response: responseData
+  };
 };
 
 module.exports = { sendEmail, sendSms };
