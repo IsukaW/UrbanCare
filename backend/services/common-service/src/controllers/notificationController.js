@@ -34,6 +34,6 @@ const sendSmsNotification = asyncHandler(async (req, res) => {
 
   await sendSms(value);
   return res.status(StatusCodes.OK).json({ message: 'SMS sent successfully' });
-});
+}); 
 
 module.exports = { sendEmailNotification, sendSmsNotification };
