@@ -13,7 +13,9 @@ const schema = Joi.object({
   TWILIO_API_SECRET: Joi.string().allow('', null),
   TWILIO_ACCOUNT_SID: Joi.string().allow('', null),
   TWILIO_FROM_NUMBER: Joi.string().allow('', null),
+  BREVO_SMTP_LOGIN: Joi.string().allow('', null),
   SENDGRID_API_KEY: Joi.string().allow('', null),
+  SENDGRID_FROM_NAME: Joi.string().allow('', null),
   SENDGRID_FROM_EMAIL: Joi.string().email().allow('', null)
 })
   .unknown()
@@ -35,7 +37,9 @@ const env = {
   TWILIO_API_SECRET: value.TWILIO_API_SECRET,
   TWILIO_ACCOUNT_SID: value.TWILIO_ACCOUNT_SID,
   TWILIO_FROM_NUMBER: value.TWILIO_FROM_NUMBER,
+  BREVO_SMTP_LOGIN: value.BREVO_SMTP_LOGIN,
   SENDGRID_API_KEY: value.SENDGRID_API_KEY,
+  SENDGRID_FROM_NAME: value.SENDGRID_FROM_NAME,
   SENDGRID_FROM_EMAIL: value.SENDGRID_FROM_EMAIL
 };
 
