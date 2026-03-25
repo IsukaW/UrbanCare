@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Select, Typography, Alert, Card, Row, Col } from 'antd';
+import { Form, Input, Button, Typography, Card, Row, Col } from 'antd';
 import { MailOutlined, LockOutlined, UserOutlined, PhoneOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/common/auth.service';
 import useAuthStore from '../../store/authStore';
 import { ROLES } from '../../constants/roles';
+import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 const ROLE_HOME = {
   [ROLES.ADMIN]: '/admin/dashboard',
@@ -19,17 +19,17 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (values) => {
     setLoading(true);
-    setError('');
     try {
-      const { token, user } = await authService.register(values);
+      const { token, user } = await authService.register({ ...values, role: ROLES.PATIENT });
       setAuth(token, user);
+      notify.success('Account created!', `Welcome to UrbanCare, ${user.firstName}`);
       navigate(ROLE_HOME[user.role] ?? '/', { replace: true });
     } catch (err) {
-      setError(err.message);
+      // Show the exact message from the backend (e.g. "Email is already registered")
+      notify.error('Registration failed', err.message);
     } finally {
       setLoading(false);
     }
@@ -54,17 +54,6 @@ export default function RegisterPage() {
           </Text>
         </div>
 
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            closable
-            className="mb-6"
-            onClose={() => setError('')}
-          />
-        )}
-
         <Form layout="vertical" onFinish={handleSubmit} size="large" requiredMark={false}>
           <Row gutter={16}>
             <Col span={12}>
@@ -76,7 +65,7 @@ export default function RegisterPage() {
                   { min: 2, message: 'Min 2 characters' },
                 ]}
               >
-                <Input prefix={<UserOutlined className="text-gray-400" />} placeholder="John" />
+                <Input prefix={<UserOutlined className="text-gray-400" />} placeholder="Isuka" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -88,7 +77,7 @@ export default function RegisterPage() {
                   { min: 2, message: 'Min 2 characters' },
                 ]}
               >
-                <Input placeholder="Doe" />
+                <Input placeholder="Wataliyadda" />
               </Form.Item>
             </Col>
           </Row>
@@ -101,7 +90,7 @@ export default function RegisterPage() {
               { type: 'email', message: 'Enter a valid email' },
             ]}
           >
-            <Input prefix={<MailOutlined className="text-gray-400" />} placeholder="you@example.com" />
+            <Input prefix={<MailOutlined className="text-gray-400" />} placeholder="you@gmail.com" />
           </Form.Item>
 
           <Form.Item
@@ -110,25 +99,50 @@ export default function RegisterPage() {
             rules={[
               { required: true, message: 'Password is required' },
               { min: 8, message: 'Minimum 8 characters' },
+              {
+                pattern: /[A-Z]/,
+                message: 'Must contain at least one uppercase letter',
+              },
+              {
+                pattern: /[0-9]/,
+                message: 'Must contain at least one number',
+              },
+              {
+                pattern: /[!@#$%^&*(),.?":{}|<>]/,
+                message: 'Must contain at least one special character',
+              },
             ]}
+            hasFeedback
           >
-            <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="Min 8 characters" />
-          </Form.Item>
-
-          <Form.Item name="phoneNumber" label="Phone Number (optional)">
-            <Input prefix={<PhoneOutlined className="text-gray-400" />} placeholder="+1234567890" />
+            <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="Min 8 chars, uppercase, number, symbol" />
           </Form.Item>
 
           <Form.Item
-            name="role"
-            label="Role"
-            rules={[{ required: true, message: 'Please select a role' }]}
+            name="confirmPassword"
+            label="Confirm Password"
+            dependencies={['password']}
+            hasFeedback
+            rules={[
+              { required: true, message: 'Please confirm your password' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Passwords do not match'));
+                },
+              }),
+            ]}
           >
-            <Select placeholder="Select your role">
-              <Option value={ROLES.PATIENT}>Patient</Option>
-              <Option value={ROLES.DOCTOR}>Doctor</Option>
-              <Option value={ROLES.ADMIN}>Admin</Option>
-            </Select>
+            <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="Re-enter your password" />
+          </Form.Item>
+
+          <Form.Item
+            name="phoneNumber"
+            label="Phone Number"
+            rules={[{ required: true, message: 'Phone number is required' }]}
+          >
+            <Input prefix={<PhoneOutlined className="text-gray-400" />} placeholder="+947XXXXXXXXX" />
           </Form.Item>
 
           <Form.Item className="mb-2">

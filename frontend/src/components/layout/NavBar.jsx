@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
+import { notify } from '../../utils/notify';
 
 const { Header } = Layout;
 const { Text } = Typography;
@@ -26,6 +27,7 @@ export default function NavBar({ collapsed, onToggle }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    notify.success('Signed out', 'See you next time!');
     clearAuth();
     navigate('/login', { replace: true });
   };

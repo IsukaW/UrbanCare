@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Tag, Typography, Card, Input, Select, Space, Alert, Button, Modal, Form, message } from 'antd';
+import { Table, Tag, Typography, Card, Input, Select, Space, Button, Modal, Form } from 'antd';
+import { notify } from '../../utils/notify';
 import { SearchOutlined, EditOutlined } from '@ant-design/icons';
 import { userService } from '../../services/common/user.service';
 import useAuthStore from '../../store/authStore';
@@ -15,7 +16,6 @@ export default function AdminUsers() {
   const [searchId, setSearchId] = useState('');
   const [foundUser, setFoundUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const [editModal, setEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -24,13 +24,12 @@ export default function AdminUsers() {
   const handleSearch = async () => {
     if (!searchId.trim()) return;
     setLoading(true);
-    setError('');
     setFoundUser(null);
     try {
       const user = await userService.getById(searchId.trim());
       setFoundUser(user);
     } catch (e) {
-      setError(e.message);
+      notify.error('Search failed', e.message);
     } finally {
       setLoading(false);
     }
@@ -50,10 +49,10 @@ export default function AdminUsers() {
     try {
       const updated = await userService.update(foundUser._id, values);
       setFoundUser(updated);
-      message.success('User updated successfully');
+      notify.success('User updated', 'Changes saved successfully.');
       setEditModal(false);
     } catch (e) {
-      message.error(e.message);
+      notify.error('Update failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -93,8 +92,6 @@ export default function AdminUsers() {
           </Button>
         </Space.Compact>
       </Card>
-
-      {error && <Alert message={error} type="error" className="mb-4" />}
 
       {foundUser && (
         <Card

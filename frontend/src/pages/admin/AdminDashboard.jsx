@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Statistic, Typography, Table, Tag, Spin, Alert } from 'antd';
+import { Row, Col, Card, Statistic, Typography, Table, Tag, Spin } from 'antd';
 import {
   UserOutlined,
   CalendarOutlined,
@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
+import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
 
@@ -39,13 +40,12 @@ const StatCard = ({ title, value, icon, color, loading }) => (
 export default function AdminDashboard() {
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     doctorService
       .list()
       .then(setDoctors)
-      .catch((e) => setError(e.message))
+      .catch((e) => notify.error('Failed to load doctors', e.message))
       .finally(() => setLoadingDoctors(false));
   }, []);
 
@@ -73,8 +73,6 @@ export default function AdminDashboard() {
         </Title>
         <Text type="secondary">Overview of UrbanCare operations</Text>
       </div>
-
-      {error && <Alert message={error} type="error" className="mb-4" />}
 
       {/* Stats row */}
       <Row gutter={[16, 16]} className="mb-8">
