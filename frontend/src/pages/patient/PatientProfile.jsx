@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Form, Input, Button, Typography, Alert, Spin, message, Tag, Descriptions, Divider, Timeline,
+  Card, Form, Input, Button, Typography, Spin, Tag, Descriptions, Divider, Timeline,
 } from 'antd';
 import {
   HeartOutlined,
@@ -9,6 +9,7 @@ import {
 import dayjs from 'dayjs';
 import { patientService } from '../../services/patient/patient.service';
 import useAuthStore from '../../store/authStore';
+import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
 
@@ -17,7 +18,6 @@ export default function PatientProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [mode, setMode] = useState('view');
   const [form] = Form.useForm();
 
@@ -47,9 +47,9 @@ export default function PatientProfile() {
       });
       setProfile(newProfile);
       setMode('view');
-      message.success('Profile created!');
+      notify.success('Profile created', 'Your patient profile is set up.');
     } catch (e) {
-      message.error(e.message);
+      notify.error('Create failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -71,8 +71,6 @@ export default function PatientProfile() {
         </Title>
         <Text type="secondary">Personal health information</Text>
       </div>
-
-      {error && <Alert message={error} type="error" className="mb-4" />}
 
       {mode === 'create' ? (
         <Card className="rounded-2xl shadow-sm border-0" title="Create Patient Profile">

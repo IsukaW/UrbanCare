@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, Alert, Card } from 'antd';
+import { Form, Input, Button, Typography, Card } from 'antd';
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/common/auth.service';
 import useAuthStore from '../../store/authStore';
 import { ROLES } from '../../constants/roles';
+import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
 
@@ -18,17 +19,17 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (values) => {
     setLoading(true);
-    setError('');
     try {
       const { token, user } = await authService.login(values);
       setAuth(token, user);
+      notify.success('Welcome back!', `Signed in as ${user.firstName}`);
       navigate(ROLE_HOME[user.role] ?? '/', { replace: true });
     } catch (err) {
-      setError(err.message);
+      // Show the exact message from the backend (e.g. "Invalid email or password")
+      notify.error('Sign in failed', err.message);
     } finally {
       setLoading(false);
     }
@@ -53,17 +54,6 @@ export default function LoginPage() {
             Sign in to your account
           </Text>
         </div>
-
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            closable
-            className="mb-6"
-            onClose={() => setError('')}
-          />
-        )}
 
         <Form layout="vertical" onFinish={handleSubmit} size="large" requiredMark={false}>
           <Form.Item

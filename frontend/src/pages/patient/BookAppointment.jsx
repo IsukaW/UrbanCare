@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Form, Input, Button, Select, DatePicker, Typography, Alert, Spin, message, Steps, Result,
+  Card, Form, Input, Button, Select, DatePicker, Typography, Spin, Steps, Result,
 } from 'antd';
+import { notify } from '../../utils/notify';
 import { CalendarOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { doctorService } from '../../services/doctor/doctor.service';
@@ -17,7 +18,6 @@ export default function BookAppointment() {
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(null);
   const [form] = Form.useForm();
 
@@ -25,13 +25,12 @@ export default function BookAppointment() {
     doctorService
       .list()
       .then(setDoctors)
-      .catch((e) => setError(e.message))
+      .catch((e) => notify.error('Failed to load doctors', e.message))
       .finally(() => setLoadingDoctors(false));
   }, []);
 
   const handleBook = async (values) => {
     setSaving(true);
-    setError('');
     try {
       const payload = {
         patientId: user._id,
@@ -45,7 +44,7 @@ export default function BookAppointment() {
       setSuccess(appt);
       form.resetFields();
     } catch (e) {
-      setError(e.message);
+      notify.error('Booking failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -88,8 +87,6 @@ export default function BookAppointment() {
         </Title>
         <Text type="secondary">Schedule a visit with a doctor</Text>
       </div>
-
-      {error && <Alert message={error} type="error" showIcon className="mb-4" />}
 
       <Card className="rounded-2xl shadow-sm border-0 max-w-lg">
         {loadingDoctors ? (

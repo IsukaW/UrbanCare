@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Form, Input, Button, Typography, Tag, Spin, Alert, message, Descriptions,
+  Card, Form, Input, Button, Typography, Tag, Spin, Descriptions,
 } from 'antd';
+import { notify } from '../../utils/notify';
 import { doctorService } from '../../services/doctor/doctor.service';
 import useAuthStore from '../../store/authStore';
 
@@ -12,7 +13,6 @@ export default function DoctorProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [mode, setMode] = useState('view'); // 'view' | 'create'
   const [form] = Form.useForm();
 
@@ -41,9 +41,9 @@ export default function DoctorProfile() {
       });
       setProfile(newProfile);
       setMode('view');
-      message.success('Profile created!');
+      notify.success('Profile created', 'Your doctor profile is live.');
     } catch (e) {
-      message.error(e.message);
+      notify.error('Create failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -65,8 +65,6 @@ export default function DoctorProfile() {
         </Title>
         <Text type="secondary">Manage your professional information</Text>
       </div>
-
-      {error && <Alert message={error} type="error" className="mb-4" />}
 
       {mode === 'view' && profile ? (
         <Card className="rounded-2xl shadow-sm border-0">

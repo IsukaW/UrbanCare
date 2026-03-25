@@ -13,23 +13,28 @@ const createClient = (baseURL) => {
     return config;
   });
 
-  // Pull out a readable error message from whatever the server sends back
+  // Pull out the exact message the backend sent back.
+  // The backend always returns { message: "..." } for errors, so we use that first.
   client.interceptors.response.use(
     (res) => res,
     (err) => {
-      const message =
+      // Prefer the backend's own message — it's already human-readable
+      const serverMessage =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        err.message ||
-        'Something went wrong';
+        null;
 
-      // Session expired or invalid token — kick the user back to login
-      if (err.response?.status === 401) {
+      // Fall back to Axios's own message only when the server sent nothing useful
+      const finalMessage = serverMessage || err.message || 'Something went wrong. Please try again.';
+
+      // Only redirect when the user already had a token (session expired).
+      // Don't redirect on 401 during login — that's just wrong credentials.
+      if (err.response?.status === 401 && tokenUtil.getToken()) {
         tokenUtil.clear();
         window.location.href = '/login';
       }
 
-      return Promise.reject(new Error(message));
+      return Promise.reject(new Error(finalMessage));
     }
   );
 

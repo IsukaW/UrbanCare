@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Card, Typography, Input, Button, Space, Alert, Tag, Descriptions, Select, Form, Modal, message,
+  Card, Typography, Input, Button, Space, Tag, Descriptions, Select, Form, Modal,
 } from 'antd';
+import { notify } from '../../utils/notify';
 import { SearchOutlined, EditOutlined } from '@ant-design/icons';
 import { appointmentService } from '../../services/appointment/appointment.service';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS } from '../../constants/appointment';
@@ -19,7 +20,6 @@ export default function AdminAppointments() {
   const [searchId, setSearchId] = useState('');
   const [appt, setAppt] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const [editModal, setEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -28,13 +28,12 @@ export default function AdminAppointments() {
   const handleSearch = async () => {
     if (!searchId.trim()) return;
     setLoading(true);
-    setError('');
     setAppt(null);
     try {
       const data = await appointmentService.getById(searchId.trim());
       setAppt(data);
     } catch (e) {
-      setError(e.message);
+      notify.error('Search failed', e.message);
     } finally {
       setLoading(false);
     }
@@ -53,10 +52,10 @@ export default function AdminAppointments() {
     try {
       const updated = await appointmentService.update(appt._id, values);
       setAppt(updated);
-      message.success('Appointment updated');
+      notify.success('Appointment updated', 'Status and details saved.');
       setEditModal(false);
     } catch (e) {
-      message.error(e.message);
+      notify.error('Update failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -85,8 +84,6 @@ export default function AdminAppointments() {
           </Button>
         </Space.Compact>
       </Card>
-
-      {error && <Alert message={error} type="error" className="mb-4" />}
 
       {appt && (
         <Card

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Typography, Button, Select, TimePicker, Form, Alert, Spin, message, Tag, Popconfirm,
+  Card, Typography, Button, Select, TimePicker, Form, Alert, Spin, Tag, Popconfirm,
 } from 'antd';
+import { notify } from '../../utils/notify';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { doctorService } from '../../services/doctor/doctor.service';
@@ -17,7 +18,6 @@ export default function DoctorSchedule() {
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function DoctorSchedule() {
         setProfile(p);
         setSchedule(p.schedule ?? []);
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => notify.error('Failed to load profile', e.message))
       .finally(() => setLoading(false));
   }, [user._id]);
 
@@ -39,7 +39,7 @@ export default function DoctorSchedule() {
     };
     // Prevent duplicates
     if (schedule.some((s) => s.dayOfWeek === slot.dayOfWeek)) {
-      message.warning('A slot for this day already exists. Remove it first.');
+      notify.warning('Duplicate slot', 'A slot for this day already exists. Remove it first.');
       return;
     }
     setSchedule((prev) => [...prev, slot].sort((a, b) => a.dayOfWeek - b.dayOfWeek));
@@ -55,9 +55,9 @@ export default function DoctorSchedule() {
     try {
       const updated = await doctorService.updateSchedule(user._id, schedule);
       setSchedule(updated.schedule);
-      message.success('Schedule saved!');
+      notify.success('Schedule saved', 'Your availability has been updated.');
     } catch (e) {
-      message.error(e.message);
+      notify.error('Save failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -92,8 +92,6 @@ export default function DoctorSchedule() {
         </Title>
         <Text type="secondary">Set your available days and times</Text>
       </div>
-
-      {error && <Alert message={error} type="error" className="mb-4" />}
 
       {/* Current Schedule */}
       <Card

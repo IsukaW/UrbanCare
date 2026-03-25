@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Card, Typography, Input, Button, Space, Alert, Tag, Descriptions, Popconfirm, message,
+  Card, Typography, Input, Button, Space, Tag, Descriptions, Popconfirm,
 } from 'antd';
+import { notify } from '../../utils/notify';
 import { SearchOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
@@ -17,22 +18,20 @@ export default function PatientAppointments() {
   const [appt, setAppt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSearch = async () => {
     if (!searchId.trim()) return;
     setLoading(true);
-    setError('');
     setAppt(null);
     try {
       const data = await appointmentService.getById(searchId.trim());
       if (data.patientId !== user._id) {
-        setError('This appointment does not belong to you.');
+        notify.error('Access denied', 'This appointment does not belong to you.');
         return;
       }
       setAppt(data);
     } catch (e) {
-      setError(e.message);
+      notify.error('Search failed', e.message);
     } finally {
       setLoading(false);
     }
@@ -43,9 +42,9 @@ export default function PatientAppointments() {
     try {
       await appointmentService.cancel(appt._id);
       setAppt((prev) => ({ ...prev, status: APPOINTMENT_STATUS.CANCELLED }));
-      message.success('Appointment cancelled');
+      notify.success('Appointment cancelled', 'Your appointment has been cancelled.');
     } catch (e) {
-      message.error(e.message);
+      notify.error('Cancel failed', e.message);
     } finally {
       setCancelling(false);
     }
@@ -80,8 +79,6 @@ export default function PatientAppointments() {
           </Button>
         </Space.Compact>
       </Card>
-
-      {error && <Alert message={error} type="error" showIcon className="mb-4" />}
 
       {appt && (
         <Card

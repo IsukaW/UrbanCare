@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Table, Card, Typography, Tag, Button, Modal, Form, Input, Select, message, Alert, Space,
+  Table, Card, Typography, Tag, Button, Modal, Form, Input, Select, Space,
 } from 'antd';
+import { notify } from '../../utils/notify';
 import { PlusOutlined } from '@ant-design/icons';
 import { doctorService } from '../../services/doctor/doctor.service';
 
@@ -11,7 +12,6 @@ const { Option } = Select;
 export default function AdminDoctors() {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
@@ -21,7 +21,7 @@ export default function AdminDoctors() {
     doctorService
       .list()
       .then(setDoctors)
-      .catch((e) => setError(e.message))
+      .catch((e) => notify.error('Failed to load doctors', e.message))
       .finally(() => setLoading(false));
   };
 
@@ -34,12 +34,12 @@ export default function AdminDoctors() {
         ...values,
         qualifications: values.qualifications?.split(',').map((s) => s.trim()).filter(Boolean),
       });
-      message.success('Doctor profile created');
+      notify.success('Doctor created', 'The doctor profile has been created.');
       setModal(false);
       form.resetFields();
       load();
     } catch (e) {
-      message.error(e.message);
+      notify.error('Create failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -81,8 +81,6 @@ export default function AdminDoctors() {
           Add Doctor
         </Button>
       </div>
-
-      {error && <Alert message={error} type="error" className="mb-4" />}
 
       <Card className="rounded-2xl shadow-sm border-0">
         <Table

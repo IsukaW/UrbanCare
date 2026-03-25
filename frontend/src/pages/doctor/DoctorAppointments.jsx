@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Card, Typography, Button, Alert, Descriptions, Tag, Modal, Select, Form, message, Input, Space,
+  Card, Typography, Button, Descriptions, Tag, Modal, Select, Form, Input, Space,
 } from 'antd';
+import { notify } from '../../utils/notify';
 import { SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
@@ -20,7 +21,6 @@ export default function DoctorAppointments() {
   const [searchId, setSearchId] = useState('');
   const [appt, setAppt] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [editModal, setEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
@@ -28,17 +28,16 @@ export default function DoctorAppointments() {
   const handleSearch = async () => {
     if (!searchId.trim()) return;
     setLoading(true);
-    setError('');
     setAppt(null);
     try {
       const data = await appointmentService.getById(searchId.trim());
       if (data.doctorId !== user._id) {
-        setError('This appointment does not belong to you.');
+        notify.error('Access denied', 'This appointment does not belong to you.');
         return;
       }
       setAppt(data);
     } catch (e) {
-      setError(e.message);
+      notify.error('Search failed', e.message);
     } finally {
       setLoading(false);
     }
@@ -54,10 +53,10 @@ export default function DoctorAppointments() {
     try {
       const updated = await appointmentService.update(appt._id, values);
       setAppt(updated);
-      message.success('Appointment updated');
+      notify.success('Status updated', 'Appointment status has been changed.');
       setEditModal(false);
     } catch (e) {
-      message.error(e.message);
+      notify.error('Update failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -87,8 +86,6 @@ export default function DoctorAppointments() {
           </Button>
         </Space.Compact>
       </Card>
-
-      {error && <Alert message={error} type="error" showIcon className="mb-4" />}
 
       {appt && (
         <Card
