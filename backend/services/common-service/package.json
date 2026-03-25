@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.4",
@@ -27,5 +28,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
