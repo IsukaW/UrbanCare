@@ -3,12 +3,13 @@ import {
   Card, Typography, Input, Button, Space, Tag, Descriptions, Popconfirm,
 } from 'antd';
 import { notify } from '../../utils/notify';
-import { SearchOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { SearchOutlined, CloseCircleOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
 import { APPOINTMENT_STATUS, APPOINTMENT_STATUS_COLORS } from '../../constants/appointment';
 import useAuthStore from '../../store/authStore';
 import { Link } from 'react-router-dom';
+import VideoCall from '../../components/VideoCall';
 
 const { Title, Text } = Typography;
 
@@ -18,6 +19,7 @@ export default function PatientAppointments() {
   const [appt, setAppt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [videoModal, setVideoModal] = useState(false);
 
   const handleSearch = async () => {
     if (!searchId.trim()) return;
@@ -25,7 +27,7 @@ export default function PatientAppointments() {
     setAppt(null);
     try {
       const data = await appointmentService.getById(searchId.trim());
-      if (data.patientId !== user._id) {
+      if (data.patientId !== user.id) {
         notify.error('Access denied', 'This appointment does not belong to you.');
         return;
       }
@@ -86,21 +88,30 @@ export default function PatientAppointments() {
           title="Appointment Details"
           extra={
             appt.status === APPOINTMENT_STATUS.SCHEDULED && (
-              <Popconfirm
-                title="Cancel this appointment?"
-                description="This action cannot be undone."
-                onConfirm={handleCancel}
-                okText="Yes, cancel"
-                okType="danger"
-              >
+              <Space>
                 <Button
-                  danger
-                  icon={<CloseCircleOutlined />}
-                  loading={cancelling}
+                  type="primary"
+                  icon={<VideoCameraOutlined />}
+                  onClick={() => setVideoModal(true)}
                 >
-                  Cancel
+                  Join Video Call
                 </Button>
-              </Popconfirm>
+                <Popconfirm
+                  title="Cancel this appointment?"
+                  description="This action cannot be undone."
+                  onConfirm={handleCancel}
+                  okText="Yes, cancel"
+                  okType="danger"
+                >
+                  <Button
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    loading={cancelling}
+                  >
+                    Cancel
+                  </Button>
+                </Popconfirm>
+              </Space>
             )
           }
         >
@@ -115,6 +126,17 @@ export default function PatientAppointments() {
             <Descriptions.Item label="Reason">{appt.reason}</Descriptions.Item>
           </Descriptions>
         </Card>
+      )}
+
+      {/* Full-screen video call overlay */}
+      {videoModal && (
+        <div className="fixed inset-0 z-[1000]">
+          <VideoCall
+            channelName={`appointment_${appt?._id}`}
+            role="publisher"
+            onLeave={() => setVideoModal(false)}
+          />
+        </div>
       )}
     </div>
   );

@@ -19,7 +19,10 @@ const schema = Joi.object({
   BREVO_SMTP_LOGIN: Joi.string().allow('', null),
   SENDGRID_API_KEY: Joi.string().allow('', null),
   SENDGRID_FROM_NAME: Joi.string().allow('', null),
-  SENDGRID_FROM_EMAIL: Joi.string().email().allow('', null)
+  SENDGRID_FROM_EMAIL: Joi.string().email().allow('', null),
+  AGORA_APP_ID: Joi.string().allow('', null),
+  AGORA_APP_CERTIFICATE: Joi.string().allow('', null),
+  AGORA_TOKEN_EXPIRY_SECONDS: Joi.number().integer().min(60).default(3600)
 })
   .unknown()
   .required();
@@ -46,7 +49,10 @@ const env = {
   BREVO_SMTP_LOGIN: value.BREVO_SMTP_LOGIN,
   SENDGRID_API_KEY: value.SENDGRID_API_KEY,
   SENDGRID_FROM_NAME: value.SENDGRID_FROM_NAME,
-  SENDGRID_FROM_EMAIL: value.SENDGRID_FROM_EMAIL
+  SENDGRID_FROM_EMAIL: value.SENDGRID_FROM_EMAIL,
+  AGORA_APP_ID: value.AGORA_APP_ID,
+  AGORA_APP_CERTIFICATE: value.AGORA_APP_CERTIFICATE,
+  AGORA_TOKEN_EXPIRY_SECONDS: value.AGORA_TOKEN_EXPIRY_SECONDS
 };
 
 module.exports = { env };

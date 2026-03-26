@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.7",
+    "agora-rtc-sdk-ng": "^4.24.3",
     "antd": "^5.17.0",
     "axios": "^1.7.2",
     "dayjs": "^1.11.11",
