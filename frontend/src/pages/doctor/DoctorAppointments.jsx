@@ -3,11 +3,12 @@ import {
   Card, Typography, Button, Descriptions, Tag, Modal, Select, Form, Input, Space,
 } from 'antd';
 import { notify } from '../../utils/notify';
-import { SearchOutlined } from '@ant-design/icons';
+import { SearchOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
 import { APPOINTMENT_STATUS, APPOINTMENT_STATUS_COLORS } from '../../constants/appointment';
 import useAuthStore from '../../store/authStore';
+import VideoCall from '../../components/VideoCall';
 
 const { Title, Text } = Typography;
 
@@ -23,6 +24,7 @@ export default function DoctorAppointments() {
   const [loading, setLoading] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [videoModal, setVideoModal] = useState(false);
   const [form] = Form.useForm();
 
   const handleSearch = async () => {
@@ -31,7 +33,7 @@ export default function DoctorAppointments() {
     setAppt(null);
     try {
       const data = await appointmentService.getById(searchId.trim());
-      if (data.doctorId !== user._id) {
+      if (data.doctorId !== user.id) {
         notify.error('Access denied', 'This appointment does not belong to you.');
         return;
       }
@@ -92,7 +94,18 @@ export default function DoctorAppointments() {
           className="rounded-2xl shadow-sm border-0"
           title="Appointment Details"
           extra={
-            <Button onClick={openEdit}>Update Status</Button>
+            <Space>
+              {appt.status === APPOINTMENT_STATUS.SCHEDULED && (
+                <Button
+                  type="primary"
+                  icon={<VideoCameraOutlined />}
+                  onClick={() => setVideoModal(true)}
+                >
+                  Join Video Call
+                </Button>
+              )}
+              <Button onClick={openEdit}>Update Status</Button>
+            </Space>
           }
         >
           <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
@@ -106,6 +119,17 @@ export default function DoctorAppointments() {
             <Descriptions.Item label="Reason">{appt.reason}</Descriptions.Item>
           </Descriptions>
         </Card>
+      )}
+
+      {/* Full-screen video call overlay */}
+      {videoModal && (
+        <div className="fixed inset-0 z-[1000]">
+          <VideoCall
+            channelName={`appointment_${appt?._id}`}
+            role="publisher"
+            onLeave={() => setVideoModal(false)}
+          />
+        </div>
       )}
 
       <Modal
