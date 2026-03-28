@@ -1,15 +1,43 @@
 const Joi = require('joi');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const { StatusCodes } = require('http-status-codes');
 const Doctor = require('../models/Doctor');
 const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
+const { env } = require('../config/env');
+
+/** Doctor may be addressed by internal userId (User._id) or by Doctor document _id (e.g. appointments use _id). */
+const doctorMatchesActor = (actorId, doctorDoc) =>
+  doctorDoc.userId === actorId || doctorDoc._id.toString() === actorId;
+
+const BCRYPT_ROUNDS = 10;
 
 const createSchema = Joi.object({
-  userId: Joi.string().required(),
+  userId: Joi.string().trim().allow('', null).optional(),
+  username: Joi.string().trim().email().max(254).optional(),
+  password: Joi.string().min(8).max(128).optional(),
   fullName: Joi.string().min(2).max(120).required(),
   specialization: Joi.string().min(2).max(100).required(),
   qualifications: Joi.array().items(Joi.string().min(2).max(120)).optional(),
   yearsOfExperience: Joi.number().min(0).max(80).optional()
+});
+
+const updateProfileSchema = Joi.object({
+  fullName: Joi.string().min(2).max(120),
+  specialization: Joi.string().min(2).max(100),
+  qualifications: Joi.array().items(Joi.string().min(2).max(120)),
+  yearsOfExperience: Joi.number().min(0).max(80)
+})
+  .min(1)
+  .messages({
+    'object.min': 'At least one field is required to update'
+  });
+
+const loginSchema = Joi.object({
+  email: Joi.string().trim().email().required(),
+  password: Joi.string().required()
 });
 
 const scheduleSchema = Joi.object({
@@ -30,6 +58,13 @@ const createDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, error.details.map((d) => d.message).join(', '));
   }
 
+  if (!value.userId?.trim()) {
+    value.userId =
+      req.user.role === 'doctor'
+        ? req.user.id
+        : new mongoose.Types.ObjectId().toString();
+  }
+
   if (req.user.role === 'doctor' && req.user.id !== value.userId) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only create their own profile');
   }
@@ -39,8 +74,75 @@ const createDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, 'Doctor profile already exists for this user');
   }
 
-  const doctor = await Doctor.create(value);
+  const { username, password, ...rest } = value;
+  const createPayload = { ...rest };
+
+  if (req.user.role === 'admin') {
+    if (!username?.trim() || !password) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Email and password are required');
+    }
+    const normalizedUsername = username.trim().toLowerCase();
+    const usernameTaken = await Doctor.findOne({ username: normalizedUsername });
+    if (usernameTaken) {
+      throw new ApiError(StatusCodes.CONFLICT, 'This email is already registered');
+    }
+    createPayload.username = normalizedUsername;
+    createPayload.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  } else if (username?.trim() || password) {
+    if (!username?.trim() || !password) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Email and password must both be provided together');
+    }
+    const normalizedUsername = username.trim().toLowerCase();
+    const usernameTaken = await Doctor.findOne({ username: normalizedUsername });
+    if (usernameTaken) {
+      throw new ApiError(StatusCodes.CONFLICT, 'This email is already registered');
+    }
+    createPayload.username = normalizedUsername;
+    createPayload.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  }
+
+  const doctor = await Doctor.create(createPayload);
   return res.status(StatusCodes.CREATED).json(doctor);
+});
+
+const loginDoctor = asyncHandler(async (req, res) => {
+  const { error, value } = loginSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, error.details.map((d) => d.message).join(', '));
+  }
+
+  const email = value.email.toLowerCase();
+  const doctor = await Doctor.findOne({ username: email }).select('+password');
+  if (!doctor?.password) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
+  }
+
+  const ok = await bcrypt.compare(value.password, doctor.password);
+  if (!ok) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
+  }
+
+  const sub = doctor._id.toString();
+  const token = jwt.sign({ sub, email: doctor.username, role: 'doctor' }, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN
+  });
+
+  const parts = doctor.fullName.trim().split(/\s+/);
+  const firstName = parts[0] || 'Doctor';
+  const lastName = parts.slice(1).join(' ').trim() || firstName;
+
+  return res.status(StatusCodes.OK).json({
+    token,
+    user: {
+      id: sub,
+      _id: sub,
+      email: doctor.username,
+      firstName,
+      lastName,
+      fullName: doctor.fullName,
+      role: 'doctor'
+    }
+  });
 });
 
 const listDoctors = asyncHandler(async (_req, res) => {
@@ -57,6 +159,35 @@ const getDoctorById = asyncHandler(async (req, res) => {
   return res.status(StatusCodes.OK).json(doctor);
 });
 
+const updateDoctor = asyncHandler(async (req, res) => {
+  const { error, value } = updateProfileSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, error.details.map((d) => d.message).join(', '));
+  }
+
+  const doctor = await Doctor.findById(req.params.id);
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  if (req.user.role === 'doctor' && !doctorMatchesActor(req.user.id, doctor)) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only update their own profile');
+  }
+
+  Object.assign(doctor, value);
+  await doctor.save();
+
+  return res.status(StatusCodes.OK).json(doctor);
+});
+
+const deleteDoctor = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findByIdAndDelete(req.params.id);
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+  return res.status(StatusCodes.NO_CONTENT).send();
+});
+
 const updateDoctorSchedule = asyncHandler(async (req, res) => {
   const { error, value } = scheduleSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -68,7 +199,7 @@ const updateDoctorSchedule = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
   }
 
-  if (req.user.role === 'doctor' && req.user.id !== doctor.userId) {
+  if (req.user.role === 'doctor' && !doctorMatchesActor(req.user.id, doctor)) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only update their own schedule');
   }
 
@@ -80,7 +211,10 @@ const updateDoctorSchedule = asyncHandler(async (req, res) => {
 
 module.exports = {
   createDoctor,
+  loginDoctor,
   listDoctors,
   getDoctorById,
+  updateDoctor,
+  deleteDoctor,
   updateDoctorSchedule
 };
