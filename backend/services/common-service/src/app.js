@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -8,6 +9,8 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const agoraRoutes = require('./routes/agoraRoutes');
+const documentRoutes = require('./routes/documentRoutes');
 const { logSecurityHeaders } = require('./middleware/logSecurityHeaders');
 const { notFound } = require('./middleware/notFound');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -50,6 +53,8 @@ app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/notify', notificationRoutes);
 app.use('/payments', paymentRoutes);
+app.use('/video', agoraRoutes);
+app.use('/documents', documentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
