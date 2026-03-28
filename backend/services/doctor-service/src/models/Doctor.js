@@ -12,6 +12,15 @@ const scheduleSlotSchema = new mongoose.Schema(
 const doctorSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, unique: true, index: true },
+    username: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+      unique: true,
+      index: true
+    },
+    password: { type: String, select: false },
     fullName: { type: String, required: true, trim: true },
     specialization: { type: String, required: true, trim: true },
     qualifications: { type: [String], default: [] },
@@ -20,7 +29,13 @@ const doctorSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    versionKey: false
+    versionKey: false,
+    toJSON: {
+      transform(_doc, ret) {
+        delete ret.password;
+        return ret;
+      }
+    }
   }
 );
 

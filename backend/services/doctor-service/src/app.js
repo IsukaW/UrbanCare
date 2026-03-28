@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -40,7 +41,16 @@ app.use(
 app.use(logSecurityHeaders);
 
 app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', service: 'doctor-service' });
+  res.status(200).json({
+    status: 'ok',
+    service: 'doctor-service',
+    myScheduleUi: '/my-schedule/index.html'
+  });
+});
+
+app.use(express.static(path.join(__dirname, '..', 'public')));
+app.get('/my-schedule', (_req, res) => {
+  res.redirect(302, '/my-schedule/index.html');
 });
 
 app.use('/doctors', doctorRoutes);

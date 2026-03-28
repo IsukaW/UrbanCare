@@ -1,4 +1,5 @@
 import { authApi } from './auth.api';
+import { doctorApi } from '../doctor/doctor.api';
 import { tokenUtil } from '../../utils/token';
 
 // Handles login/register logic and keeps the token saved
@@ -15,10 +16,22 @@ export const authService = {
 
   // Sign in and persist the token so the user stays logged in
   async login(credentials) {
-    const { data } = await authApi.login(credentials);
-    tokenUtil.setToken(data.token);
-    tokenUtil.setUser(data.user);
-    return data;
+    try {
+      const { data } = await authApi.login(credentials);
+      tokenUtil.setToken(data.token);
+      tokenUtil.setUser(data.user);
+      return data;
+    } catch (primaryErr) {
+      // Admin-created doctors live in doctor-service only (not common User collection)
+      try {
+        const { data } = await doctorApi.login(credentials);
+        tokenUtil.setToken(data.token);
+        tokenUtil.setUser(data.user);
+        return data;
+      } catch {
+        throw primaryErr;
+      }
+    }
   },
 
   // Wipe the saved token and user on logout
