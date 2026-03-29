@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Card,
   Typography,
@@ -12,6 +12,12 @@ import { CalendarOutlined, MedicineBoxOutlined, LeftOutlined, RightOutlined } fr
 import { Link } from 'react-router-dom';
 import { doctorService } from '../../services/doctor/doctor.service';
 import useAuthStore from '../../store/authStore';
+import {
+  mondayOfWeekContaining,
+  formatWeekStartMonday,
+  addDays,
+  getSlotsForWeek,
+} from '../../utils/doctorScheduleWeek';
 
 const { Title, Text } = Typography;
 
@@ -26,23 +32,12 @@ function endFromStart(start) {
   return `${pad2(h + 2)}:${pad2(m)}`;
 }
 
-function mondayOfWeekContaining(d) {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const day = x.getDay();
-  const offset = day === 0 ? -6 : 1 - day;
-  x.setDate(x.getDate() + offset);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function addDays(date, n) {
-  const x = new Date(date.getTime());
-  x.setDate(x.getDate() + n);
-  return x;
-}
-
 function slotMatches(s, dayOfWeek, startTime, endTime) {
-  return s.dayOfWeek === dayOfWeek && s.startTime === startTime && s.endTime === endTime;
+  return (
+    Number(s.dayOfWeek) === dayOfWeek &&
+    String(s.startTime) === startTime &&
+    String(s.endTime) === endTime
+  );
 }
 
 function sameWeekMonday(a, b) {
@@ -81,13 +76,18 @@ export default function DoctorSchedule() {
     loadProfile().finally(() => setLoading(false));
   }, [doctorId, loadProfile]);
 
-  const schedule = profile?.schedule ?? [];
+  const mon = displayWeekStart;
+  const schedule = useMemo(
+    () => (profile ? getSlotsForWeek(profile, mon) : []),
+    [profile, mon]
+  );
 
   const persistSchedule = async (nextSchedule) => {
     if (!doctorId) return;
+    const weekStartMonday = formatWeekStartMonday(mon);
     setSaving(true);
     try {
-      const doc = await doctorService.updateSchedule(doctorId, nextSchedule);
+      const doc = await doctorService.updateSchedule(doctorId, weekStartMonday, nextSchedule);
       setProfile(doc);
     } catch (e) {
       setError(e.message || 'Could not update schedule');
@@ -104,7 +104,7 @@ export default function DoctorSchedule() {
     if (exists) {
       Modal.confirm({
         title: 'Remove availability?',
-        content: 'This removes this recurring weekly slot.',
+        content: 'This removes this slot for this calendar week only.',
         okText: 'Remove',
         okButtonProps: { danger: true },
         onOk: () => {
@@ -118,8 +118,8 @@ export default function DoctorSchedule() {
     }
   };
 
-  const mon = displayWeekStart;
   const sun = addDays(mon, 6);
+  const weekKey = mon.getTime();
   const weekLabel = `${mon.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} – ${sun.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
   const thisWeekMonday = mondayOfWeekContaining(new Date());
   const viewingCurrentWeek = sameWeekMonday(mon, thisWeekMonday);
@@ -143,7 +143,7 @@ export default function DoctorSchedule() {
           <Title level={3} style={{ margin: 0 }}>
             My schedule
           </Title>
-          <Text type="secondary">Set recurring weekly availability in 2-hour blocks</Text>
+          <Text type="secondary">Availability is saved per week — new weeks start empty until you fill them</Text>
         </div>
         <Space wrap>
           <Link to="/doctor/dashboard">
@@ -215,15 +215,16 @@ export default function DoctorSchedule() {
             <Text type="secondary" className="block mb-3 text-sm">
               <span className="font-medium text-slate-700">{weekLabel}</span>
               {!viewingCurrentWeek && (
-                <span className="text-amber-700/90"> · viewing another week · availability still applies every week</span>
+                <span className="text-amber-700/90"> · viewing another week</span>
               )}
               <span className="block mt-1">
-                Monday–Sunday · 2-hour blocks, 6:00 AM–10:00 PM · click a cell to mark available (dark green); click again to remove
+                Monday–Sunday · 2-hour blocks, 6:00 AM–10:00 PM · each week is separate; past weeks keep what you saved; future weeks are empty until set
               </span>
             </Text>
 
             <div className="overflow-x-auto">
               <div
+                key={weekKey}
                 className="grid gap-1 min-w-[640px]"
                 style={{
                   gridTemplateColumns: '52px repeat(7, minmax(0, 1fr))',
@@ -233,7 +234,10 @@ export default function DoctorSchedule() {
                 {Array.from({ length: 7 }, (_, c) => {
                   const dayDate = addDays(mon, c);
                   return (
-                    <div key={c} className="text-center pb-2 border-b border-slate-100">
+                    <div
+                      key={`h-${weekKey}-${c}`}
+                      className="text-center pb-2 border-b border-slate-100"
+                    >
                       <div className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">
                         {dayDate.toLocaleDateString(undefined, { weekday: 'short' })}
                       </div>
@@ -245,7 +249,7 @@ export default function DoctorSchedule() {
                 {SLOT_STARTS.map((start) => {
                   const end = endFromStart(start);
                   return (
-                    <React.Fragment key={start}>
+                    <React.Fragment key={`${weekKey}-${start}`}>
                       <div className="text-[10px] text-slate-500 flex items-center justify-end pr-1 text-right leading-tight">
                         {start}
                         <br />
@@ -257,10 +261,11 @@ export default function DoctorSchedule() {
                         const on = schedule.some((s) => slotMatches(s, dow, start, end));
                         return (
                           <button
-                            key={`${dow}-${start}`}
+                            key={`${weekKey}-${c}-${start}`}
                             type="button"
                             disabled={saving}
                             onClick={() => onSlotClick(dow, start, end)}
+                            title={`${cellDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · ${start}–${end}`}
                             className={[
                               'min-h-9 rounded-md border text-[0] transition-colors',
                               on

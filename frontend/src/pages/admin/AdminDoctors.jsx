@@ -158,8 +158,16 @@ export default function AdminDoctors() {
     {
       title: 'Schedule',
       key: 'schedule',
-      width: 88,
-      render: (_, r) => `${r.schedule?.length ?? 0} days`,
+      width: 100,
+      render: (_, r) => {
+        const weeks = r.weeklyAvailability;
+        if (weeks?.length) {
+          const slots = weeks.reduce((a, w) => a + (w.slots?.length ?? 0), 0);
+          return `${weeks.length} wk · ${slots} slots`;
+        }
+        if (r.schedule?.length) return `${r.schedule.length} slot (legacy)`;
+        return '—';
+      },
     },
     {
       title: 'Actions',

@@ -25,7 +25,18 @@ const doctorSchema = new mongoose.Schema(
     specialization: { type: String, required: true, trim: true },
     qualifications: { type: [String], default: [] },
     yearsOfExperience: { type: Number, min: 0, default: 0 },
-    schedule: { type: [scheduleSlotSchema], default: [] }
+    /** @deprecated Use weeklyAvailability — kept for legacy clients */
+    schedule: { type: [scheduleSlotSchema], default: [] },
+    /** One entry per calendar week (Monday YYYY-MM-DD); slots apply only to that week */
+    weeklyAvailability: {
+      type: [
+        {
+          weekStartMonday: { type: String, required: true, trim: true },
+          slots: { type: [scheduleSlotSchema], default: [] }
+        }
+      ],
+      default: []
+    }
   },
   {
     timestamps: true,
