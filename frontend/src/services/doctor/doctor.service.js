@@ -26,8 +26,8 @@ export const doctorService = {
     await doctorApi.remove(id);
   },
 
-  async updateSchedule(id, schedule) {
-    const { data } = await doctorApi.updateSchedule(id, schedule);
+  async updateSchedule(id, weekStartMonday, schedule) {
+    const { data } = await doctorApi.updateSchedule(id, { weekStartMonday, schedule });
     return data.doctor ?? data;
   },
 };

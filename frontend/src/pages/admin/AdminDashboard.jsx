@@ -59,9 +59,16 @@ export default function AdminDashboard() {
       render: (v) => `${v} yrs`,
     },
     {
-      title: 'Schedule Days',
+      title: 'Schedule',
       key: 'schedule',
-      render: (_, r) => r.schedule?.length ?? 0,
+      render: (_, r) => {
+        const weeks = r.weeklyAvailability;
+        if (weeks?.length) {
+          const slots = weeks.reduce((a, w) => a + (w.slots?.length ?? 0), 0);
+          return `${weeks.length} wk / ${slots} slots`;
+        }
+        return r.schedule?.length ?? 0;
+      },
     },
   ];
 

@@ -10,6 +10,7 @@ import {
 import { Link } from 'react-router-dom';
 import { doctorService } from '../../services/doctor/doctor.service';
 import useAuthStore from '../../store/authStore';
+import { getSlotsForWeek, mondayOfWeekContaining } from '../../utils/doctorScheduleWeek';
 
 const { Title, Text } = Typography;
 
@@ -45,7 +46,7 @@ export default function DoctorDashboard() {
 
   const stats = useMemo(() => {
     if (!profile) return null;
-    const slotCount = profile.schedule?.length ?? 0;
+    const slotCount = getSlotsForWeek(profile, mondayOfWeekContaining(new Date())).length;
     const hoursPerWeek = slotCount * 2;
     const qualCount = profile.qualifications?.length ?? 0;
     return { slotCount, hoursPerWeek, qualCount };
@@ -127,10 +128,10 @@ export default function DoctorDashboard() {
                   title="Weekly slots"
                   value={stats.slotCount}
                   prefix={<CalendarOutlined className="text-blue-500" />}
-                  suffix={<span className="text-sm font-normal text-slate-400">bookable</span>}
+                  suffix={<span className="text-sm font-normal text-slate-400">this week</span>}
                 />
                 <Text type="secondary" className="text-xs block mt-2">
-                  2-hour availability blocks this week (recurring)
+                  2-hour blocks set for the current calendar week
                 </Text>
               </Card>
             </Col>

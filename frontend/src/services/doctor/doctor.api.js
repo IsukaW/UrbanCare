@@ -8,5 +8,5 @@ export const doctorApi = {
   getById: (id) => doctorClient.get(`/doctors/${id}`),
   update: (id, data) => doctorClient.patch(`/doctors/${id}`, data),
   remove: (id) => doctorClient.delete(`/doctors/${id}`),
-  updateSchedule: (id, schedule) => doctorClient.patch(`/doctors/${id}/schedule`, { schedule }),
+  updateSchedule: (id, payload) => doctorClient.patch(`/doctors/${id}/schedule`, payload),
 };

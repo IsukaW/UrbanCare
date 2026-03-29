@@ -32,6 +32,27 @@
     return x;
   }
 
+  function formatWeekStartMonday(mon) {
+    var y = mon.getFullYear();
+    var m = String(mon.getMonth() + 1).padStart(2, '0');
+    var d = String(mon.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+
+  function getSlotsForWeek(doc, mondayDate) {
+    var key = formatWeekStartMonday(mondayDate);
+    var list = doc.weeklyAvailability || [];
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i].weekStartMonday === key) return list[i].slots || [];
+    }
+    if (!list.length && doc.schedule && doc.schedule.length) {
+      var cur = mondayOfWeekContaining(new Date());
+      if (formatWeekStartMonday(cur) === key) return doc.schedule;
+    }
+    return [];
+  }
+
   function slotKey(dayOfWeek, startTime, endTime) {
     return dayOfWeek + '|' + startTime + '|' + endTime;
   }
@@ -130,7 +151,7 @@
       var cur = mondayOfWeekContaining(new Date());
       if (cur.getTime() !== weekAnchor.getTime()) {
         weekAnchor = cur;
-        renderCalendar();
+        fetchDoctorAndRender().catch(function () {});
       }
       scheduleNextMondayRollover();
     }, ms);
@@ -141,7 +162,7 @@
       var cur = mondayOfWeekContaining(new Date());
       if (cur.getTime() !== weekAnchor.getTime()) {
         weekAnchor = cur;
-        renderCalendar();
+        fetchDoctorAndRender().catch(function () {});
       }
     }, 30000);
   }
@@ -150,14 +171,17 @@
     var id = user && (user._id || user.id);
     if (!id) throw new Error('No doctor id');
     return api('/doctors/' + id).then(function (doc) {
-      scheduleMap = parseSchedule(doc.schedule);
+      scheduleMap = parseSchedule(getSlotsForWeek(doc, weekAnchor));
       renderCalendar();
     });
   }
 
   function persistSchedule() {
     var id = user && (user._id || user.id);
-    var body = { schedule: scheduleFromMap(scheduleMap) };
+    var body = {
+      weekStartMonday: formatWeekStartMonday(weekAnchor),
+      schedule: scheduleFromMap(scheduleMap)
+    };
     return api('/doctors/' + id + '/schedule', { method: 'PATCH', body: JSON.stringify(body) }).then(function () {
       return fetchDoctorAndRender();
     });
