@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { StatusCodes } = require('http-status-codes');
 const Doctor = require('../models/Doctor');
+const PendingDoctorRegistration = require('../models/PendingDoctorRegistration');
 const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { env } = require('../config/env');
@@ -115,7 +116,22 @@ const loginDoctor = asyncHandler(async (req, res) => {
 
   const email = value.email.toLowerCase();
   const doctor = await Doctor.findOne({ username: email }).select('+password');
+
   if (!doctor?.password) {
+    const recent = await PendingDoctorRegistration.findOne({ email }).sort({ createdAt: -1 }).lean();
+    if (recent?.status === 'pending') {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Your registration is pending approval. You cannot sign in until an administrator approves your request.'
+      );
+    }
+    if (recent?.status === 'rejected') {
+      const reason = recent.rejectionReason ? ` ${recent.rejectionReason}` : '';
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        `Your registration was rejected by the system administrator.${reason}`
+      );
+    }
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
   }
 
