@@ -25,6 +25,8 @@ const doctorSchema = new mongoose.Schema(
     specialization: { type: String, required: true, trim: true },
     qualifications: { type: [String], default: [] },
     yearsOfExperience: { type: Number, min: 0, default: 0 },
+    /** Data URL (data:image/...;base64,...) — bounded size in controller */
+    profilePhoto: { type: String, default: '' },
     /** @deprecated Use weeklyAvailability — kept for legacy clients */
     schedule: { type: [scheduleSlotSchema], default: [] },
     /** One entry per calendar week (Monday YYYY-MM-DD); slots apply only to that week */

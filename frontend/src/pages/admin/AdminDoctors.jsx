@@ -359,29 +359,40 @@ export default function AdminDoctors() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 150,
+      width: 100,
+      fixed: 'right',
       align: 'center',
       render: (_, record) => (
-        <Space size={6}>
-          <Button
-            type="primary"
-            size="small"
-            icon={<CheckOutlined />}
-            loading={pendingActingId === record._id}
-            onClick={() => approvePending(record)}
-          >
-            Approve
-          </Button>
-          <Button
-            danger
-            size="small"
-            icon={<CloseOutlined />}
-            disabled={pendingActingId === record._id}
-            onClick={() => openReject(record)}
-          >
-            Reject
-          </Button>
-        </Space>
+        <div className="flex justify-center">
+          <Space direction="vertical" size={4} className="w-full max-w-[92px]">
+            <Tooltip title="Approve registration">
+              <Button
+                type="primary"
+                size="small"
+                block
+                className="!text-xs !px-2 !h-7"
+                icon={<CheckOutlined />}
+                loading={pendingActingId === record._id}
+                onClick={() => approvePending(record)}
+              >
+                Approve
+              </Button>
+            </Tooltip>
+            <Tooltip title="Reject registration">
+              <Button
+                danger
+                size="small"
+                block
+                className="!text-xs !px-2 !h-7"
+                icon={<CloseOutlined />}
+                disabled={pendingActingId === record._id}
+                onClick={() => openReject(record)}
+              >
+                Reject
+              </Button>
+            </Tooltip>
+          </Space>
+        </div>
       ),
     },
   ];
@@ -439,6 +450,7 @@ export default function AdminDoctors() {
           pagination={{ pageSize: 5 }}
           size="middle"
           locale={{ emptyText: 'No pending requests' }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
