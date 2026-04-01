@@ -8,6 +8,7 @@ const PendingDoctorRegistration = require('../models/PendingDoctorRegistration')
 const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { env } = require('../config/env');
+const { parseProfilePhotoDataUrl } = require('../utils/profilePhoto');
 
 /** Doctor may be addressed by internal userId (User._id) or by Doctor document _id (e.g. appointments use _id). */
 const doctorMatchesActor = (actorId, doctorDoc) =>
@@ -22,14 +23,17 @@ const createSchema = Joi.object({
   fullName: Joi.string().min(2).max(120).required(),
   specialization: Joi.string().min(2).max(100).required(),
   qualifications: Joi.array().items(Joi.string().min(2).max(120)).optional(),
-  yearsOfExperience: Joi.number().min(0).max(80).optional()
+  yearsOfExperience: Joi.number().min(0).max(80).optional(),
+  /** data:image/(jpeg|png|webp|gif);base64,... — max ~400KB decoded (validated in controller) */
+  profilePhoto: Joi.string().allow('', null).max(650000).optional()
 });
 
 const updateProfileSchema = Joi.object({
   fullName: Joi.string().min(2).max(120),
   specialization: Joi.string().min(2).max(100),
   qualifications: Joi.array().items(Joi.string().min(2).max(120)),
-  yearsOfExperience: Joi.number().min(0).max(80)
+  yearsOfExperience: Joi.number().min(0).max(80),
+  profilePhoto: Joi.string().allow('', null).max(650000).optional()
 })
   .min(1)
   .messages({
@@ -79,6 +83,10 @@ const createDoctor = asyncHandler(async (req, res) => {
 
   const { username, password, ...rest } = value;
   const createPayload = { ...rest };
+
+  if (createPayload.profilePhoto !== undefined) {
+    createPayload.profilePhoto = parseProfilePhotoDataUrl(createPayload.profilePhoto);
+  }
 
   if (req.user.role === 'admin') {
     if (!username?.trim() || !password) {
@@ -164,12 +172,12 @@ const loginDoctor = asyncHandler(async (req, res) => {
 });
 
 const listDoctors = asyncHandler(async (_req, res) => {
-  const doctors = await Doctor.find({}).sort({ fullName: 1 });
+  const doctors = await Doctor.find({}).sort({ fullName: 1 }).lean();
   return res.status(StatusCodes.OK).json(doctors);
 });
 
 const getDoctorById = asyncHandler(async (req, res) => {
-  const doctor = await Doctor.findById(req.params.id);
+  const doctor = await Doctor.findById(req.params.id).lean();
   if (!doctor) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
   }
@@ -192,10 +200,15 @@ const updateDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only update their own profile');
   }
 
-  Object.assign(doctor, value);
+  const { profilePhoto, ...rest } = value;
+  Object.assign(doctor, rest);
+  if (profilePhoto !== undefined) {
+    doctor.profilePhoto = parseProfilePhotoDataUrl(profilePhoto);
+  }
   await doctor.save();
 
-  return res.status(StatusCodes.OK).json(doctor);
+  const updated = await Doctor.findById(doctor._id).lean();
+  return res.status(StatusCodes.OK).json(updated);
 });
 
 const deleteDoctor = asyncHandler(async (req, res) => {
