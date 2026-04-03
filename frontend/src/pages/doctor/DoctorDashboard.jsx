@@ -1,37 +1,56 @@
-import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Typography, Tag, Spin, Alert, Button } from 'antd';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Card, Typography, Spin, Alert, Button, Space, Statistic, Row, Col } from 'antd';
 import {
-  CalendarOutlined,
   MedicineBoxOutlined,
+  CalendarOutlined,
   ClockCircleOutlined,
-  UserOutlined,
+  TrophyOutlined,
+  BookOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { doctorService } from '../../services/doctor/doctor.service';
 import useAuthStore from '../../store/authStore';
-import { DAYS_OF_WEEK } from '../../constants/appointment';
+import { getSlotsForWeek, mondayOfWeekContaining } from '../../utils/doctorScheduleWeek';
 
 const { Title, Text } = Typography;
 
 export default function DoctorDashboard() {
   const user = useAuthStore((s) => s.user);
+  const doctorId = user?._id ?? user?.id;
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!user?._id) return;
-    doctorService
-      .getById(user._id)
+  const loadProfile = useCallback(() => {
+    if (!doctorId) return Promise.resolve();
+    return doctorService
+      .getById(doctorId)
       .then(setProfile)
       .catch((e) => {
-        // Profile not created yet is expected
         if (!e.message.includes('404') && !e.message.includes('not found')) {
           setError(e.message);
         }
-      })
-      .finally(() => setLoading(false));
-  }, [user]);
+        setProfile(null);
+      });
+  }, [doctorId]);
+
+  useEffect(() => {
+    if (!doctorId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    loadProfile().finally(() => setLoading(false));
+  }, [doctorId, loadProfile]);
+
+  const stats = useMemo(() => {
+    if (!profile) return null;
+    const slotCount = getSlotsForWeek(profile, mondayOfWeekContaining(new Date())).length;
+    const hoursPerWeek = slotCount * 2;
+    const qualCount = profile.qualifications?.length ?? 0;
+    return { slotCount, hoursPerWeek, qualCount };
+  }, [profile]);
 
   if (loading) {
     return (
@@ -42,137 +61,120 @@ export default function DoctorDashboard() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Title level={3} style={{ margin: 0 }}>
-          Welcome, Dr. {user?.firstName}
-        </Title>
-        <Text type="secondary">Manage your profile, schedule, and appointments</Text>
+    <div className="p-6 max-w-6xl mx-auto">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <Title level={3} style={{ margin: 0 }}>
+            Welcome, Dr. {user?.firstName}
+          </Title>
+          <Text type="secondary">Overview of your practice at a glance</Text>
+        </div>
+        {/* <Space wrap>
+          <Link to="/doctor/profile">
+            <Button>Profile</Button>
+          </Link>
+          <Link to="/doctor/schedule">
+            <Button type="primary" icon={<CalendarOutlined />}>
+              My schedule
+            </Button>
+          </Link>
+          <Link to="/doctor/appointments">
+            <Button>Appointments</Button>
+          </Link>
+        </Space> */}
       </div>
 
-      {error && <Alert message={error} type="error" className="mb-4" />}
+      {error && (
+        <Alert
+          message={error}
+          type="error"
+          closable
+          onClose={() => setError('')}
+          className="mb-4"
+        />
+      )}
 
       {!profile ? (
-        <Card className="rounded-2xl shadow-sm border-0 text-center py-10">
-          <MedicineBoxOutlined className="text-4xl text-blue-400 mb-4" />
-          <Title level={4}>No Doctor Profile Found</Title>
+        <Card className="rounded-2xl shadow-sm border-0 text-center py-12">
+          <MedicineBoxOutlined className="text-4xl text-blue-400 mb-3" />
+          <Title level={4}>No doctor profile</Title>
           <Text type="secondary" className="block mb-4">
-            Set up your doctor profile to get started
+            Complete your profile to see statistics and manage your schedule.
           </Text>
           <Link to="/doctor/profile">
             <Button type="primary" size="large">
-              Create Profile
+              Go to profile
             </Button>
           </Link>
         </Card>
       ) : (
-        <Row gutter={[16, 16]}>
-          {/* Profile summary */}
-          <Col xs={24} lg={8}>
-            <Card className="rounded-2xl shadow-sm border-0 h-full">
-              <div className="text-center mb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full text-blue-600 text-2xl mb-3">
-                  <UserOutlined />
-                </div>
-                <Title level={4} style={{ margin: 0 }}>
-                  {profile.fullName}
-                </Title>
-                <Tag color="blue" className="mt-2">
-                  {profile.specialization}
-                </Tag>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between py-1 border-b border-gray-50">
-                  <Text type="secondary">Experience</Text>
-                  <Text strong>{profile.yearsOfExperience} yrs</Text>
-                </div>
-                <div className="flex justify-between py-1">
-                  <Text type="secondary">Qualifications</Text>
-                  <div className="flex gap-1 flex-wrap justify-end max-w-32">
-                    {profile.qualifications?.map((q) => (
-                      <Tag key={q} size="small">
-                        {q}
-                      </Tag>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <Link to="/doctor/profile">
-                <Button block className="mt-4">
-                  Edit Profile
-                </Button>
-              </Link>
-            </Card>
-          </Col>
+        <>
+          <Card size="small" className="rounded-xl border-slate-100 mb-6 shadow-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Text strong className="text-lg">
+                {profile.fullName}
+              </Text>
+              <Text type="secondary">{profile.specialization}</Text>
+            </div>
+          </Card>
 
-          {/* Schedule */}
-          <Col xs={24} lg={16}>
-            <Card
-              className="rounded-2xl shadow-sm border-0"
-              title={
-                <span className="flex items-center gap-2">
-                  <ClockCircleOutlined /> Weekly Schedule
-                </span>
-              }
-              extra={
-                <Link to="/doctor/schedule">
-                  <Button size="small">Manage</Button>
-                </Link>
-              }
-            >
-              {profile.schedule?.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {profile.schedule.map((slot) => {
-                    const day = DAYS_OF_WEEK.find((d) => d.value === slot.dayOfWeek);
-                    return (
-                      <div
-                        key={slot.dayOfWeek}
-                        className="bg-blue-50 rounded-xl px-4 py-3 min-w-32"
-                      >
-                        <div className="text-blue-700 font-semibold text-sm">{day?.label}</div>
-                        <div className="text-gray-500 text-xs mt-1">
-                          {slot.startTime} – {slot.endTime}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <CalendarOutlined className="text-3xl mb-2" />
-                  <div>No schedule set</div>
-                  <Link to="/doctor/schedule">
-                    <Button type="link" className="mt-2">
-                      Add Schedule
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </Card>
-
-            {/* Quick actions */}
-            <Row gutter={[16, 16]} className="mt-4">
-              <Col xs={24} sm={12}>
-                <Link to="/doctor/appointments">
-                  <Card
-                    className="rounded-2xl shadow-sm border-0 hover:shadow-md transition-all cursor-pointer"
-                    bodyStyle={{ padding: 20 }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <CalendarOutlined className="text-orange-500" />
-                      </div>
-                      <div>
-                        <div className="font-semibold">My Appointments</div>
-                        <div className="text-xs text-gray-400">View & manage</div>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
+          <Title level={5} className="!mb-3 !mt-0 text-slate-600">
+            Statistics
+          </Title>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card className="rounded-2xl shadow-sm border-0 h-full">
+                <Statistic
+                  title="Weekly slots"
+                  value={stats.slotCount}
+                  prefix={<CalendarOutlined className="text-blue-500" />}
+                  suffix={<span className="text-sm font-normal text-slate-400">this week</span>}
+                />
+                <Text type="secondary" className="text-xs block mt-2">
+                  2-hour blocks set for the current calendar week
+                </Text>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card className="rounded-2xl shadow-sm border-0 h-full">
+                <Statistic
+                  title="Hours / week"
+                  value={stats.hoursPerWeek}
+                  prefix={<ClockCircleOutlined className="text-emerald-600" />}
+                  suffix="h"
+                />
+                <Text type="secondary" className="text-xs block mt-2">
+                  Estimated from marked slots (×2h each)
+                </Text>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card className="rounded-2xl shadow-sm border-0 h-full">
+                <Statistic
+                  title="Experience"
+                  value={profile.yearsOfExperience ?? 0}
+                  prefix={<TrophyOutlined className="text-amber-500" />}
+                  suffix="yrs"
+                />
+                <Text type="secondary" className="text-xs block mt-2">
+                  Years of practice
+                </Text>
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card className="rounded-2xl shadow-sm border-0 h-full">
+                <Statistic
+                  title="Qualifications"
+                  value={stats.qualCount}
+                  prefix={<BookOutlined className="text-violet-500" />}
+                />
+                <Text type="secondary" className="text-xs block mt-2">
+                  Listed credentials
+                </Text>
+              </Card>
+            </Col>
+          </Row>
+        </>
       )}
     </div>
   );
