@@ -8,6 +8,7 @@ const patientRoutes = require('./routes/patientRoutes');
 const { logSecurityHeaders } = require('./middleware/logSecurityHeaders');
 const { notFound } = require('./middleware/notFound');
 const { errorHandler } = require('./middleware/errorHandler');
+const medicalReportRoutes = require('./routes/medicalReportRoutes');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/patients', patientRoutes);
+app.use('/patients/:patientId/documents', medicalReportRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
