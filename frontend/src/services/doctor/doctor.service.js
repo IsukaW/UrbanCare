@@ -17,17 +17,8 @@ export const doctorService = {
     return data.doctor ?? data;
   },
 
-  async update(id, payload) {
-    const { data } = await doctorApi.update(id, payload);
-    return data.doctor ?? data;
-  },
-
-  async remove(id) {
-    await doctorApi.remove(id);
-  },
-
-  async updateSchedule(id, weekStartMonday, schedule) {
-    const { data } = await doctorApi.updateSchedule(id, { weekStartMonday, schedule });
+  async updateSchedule(id, schedule) {
+    const { data } = await doctorApi.updateSchedule(id, schedule);
     return data.doctor ?? data;
   },
 };
