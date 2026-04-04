@@ -46,6 +46,8 @@ const register = asyncHandler(async (req, res) => {
   const passwordHash = await bcrypt.hash(value.password, 12);
   const firstName = value.firstName.trim();
   const lastName = value.lastName.trim();
+  // Doctors and patients start as pending until an admin approves them
+  const status = value.role === 'admin' ? 'approved' : 'pending';
   const user = await User.create({
     email: value.email.toLowerCase(),
     passwordHash,
@@ -53,10 +55,9 @@ const register = asyncHandler(async (req, res) => {
     lastName,
     fullName: `${firstName} ${lastName}`.trim(),
     role: value.role,
+    status,
     phoneNumber: value.phoneNumber
   });
-
-  const token = issueToken(user);
 
   return res.status(StatusCodes.CREATED).json({
     user: {
@@ -66,9 +67,13 @@ const register = asyncHandler(async (req, res) => {
       lastName: user.lastName,
       fullName: user.fullName,
       role: user.role,
+      status: user.status,
       phoneNumber: user.phoneNumber
     },
-    token
+    message:
+      status === 'pending'
+        ? 'Registration successful. Your account is pending admin approval.'
+        : 'Registration successful.'
   });
 });
 
@@ -88,6 +93,14 @@ const login = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
   }
 
+  if (user.status === 'pending') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account is pending admin approval. You will receive an email once approved.');
+  }
+
+  if (user.status === 'rejected') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account registration has been rejected. Please contact support.');
+  }
+
   const token = issueToken(user);
 
   return res.status(StatusCodes.OK).json({
@@ -99,6 +112,7 @@ const login = asyncHandler(async (req, res) => {
       lastName: user.lastName,
       fullName: user.fullName,
       role: user.role,
+      status: user.status,
       phoneNumber: user.phoneNumber
     }
   });

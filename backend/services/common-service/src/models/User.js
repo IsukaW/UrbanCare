@@ -8,6 +8,11 @@ const userSchema = new mongoose.Schema(
     lastName: { type: String, required: true, trim: true },
     fullName: { type: String, required: true, trim: true },
     role: { type: String, enum: ['admin', 'doctor', 'patient'], required: true },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
     phoneNumber: { type: String, trim: true }
   },
   {
