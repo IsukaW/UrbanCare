@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card, Form, Input, Button, Typography, Tag, Spin, Descriptions,
+  Avatar, Upload, Space, message,
 } from 'antd';
+import { CameraOutlined, UserOutlined } from '@ant-design/icons';
 import { notify } from '../../utils/notify';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { documentService } from '../../services/common/document.service';
@@ -31,18 +33,7 @@ export default function DoctorProfile() {
     }
   };
 
-  useEffect(() => {
-    if (!doctorId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const url = await documentService.getViewUrl(profilePhotoDocumentId);
-      setPhotoUrl(url);
-    } catch {
-      setPhotoUrl(null);
-    }
-  };
+
 
   useEffect(() => {
     doctorService
@@ -55,20 +46,6 @@ export default function DoctorProfile() {
       .catch(() => setMode('create'))
       .finally(() => setLoading(false));
   }, [user._id]);
-
-  // Revoke blob URLs to avoid memory leaks
-  useEffect(() => {
-    return () => {
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
-    };
-  }, [photoUrl]);
-
-  // Revoke blob URLs to avoid memory leaks
-  useEffect(() => {
-    return () => {
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
-    };
-  }, [photoUrl]);
 
   // Revoke blob URLs to avoid memory leaks
   useEffect(() => {
@@ -102,7 +79,7 @@ export default function DoctorProfile() {
   const handlePhotoBeforeUpload = async (file) => {
     setSaving(true);
     try {
-      const updated = await doctorService.uploadPhoto(doctorId, file);
+      const updated = await doctorService.uploadPhoto(profile._id, file);
       setProfile(updated);
       await loadPhotoUrl(updated.profilePhotoDocumentId);
       notify.success('Profile photo updated');
@@ -117,7 +94,7 @@ export default function DoctorProfile() {
   const handleRemovePhoto = async () => {
     setSaving(true);
     try {
-      const updated = await doctorService.update(doctorId, { profilePhotoDocumentId: null });
+      const updated = await doctorService.update(profile._id, { profilePhotoDocumentId: null });
       setProfile(updated);
       if (photoUrl) URL.revokeObjectURL(photoUrl);
       setPhotoUrl(null);
@@ -137,7 +114,7 @@ export default function DoctorProfile() {
     );
   }
 
-  if (!doctorId) {
+  if (!profile) {
     return (
       <div className="p-6 max-w-2xl">
         <Text type="danger">Unable to load your doctor profile (missing account id).</Text>

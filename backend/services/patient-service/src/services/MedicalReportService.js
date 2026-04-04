@@ -1,127 +1,92 @@
-const axios = require('axios');
 const FormData = require('form-data');
+const axios = require('axios');
 const { env } = require('../config/env');
-const ApiError = require('../utils/ApiError');
-const { StatusCodes } = require('http-status-codes');
 
-const DOCUMENTS_URL = `${env.COMMON_SERVICE_URL}/documents`;
+const BASE_URL = `${env.COMMON_SERVICE_URL.replace(/\/$/, '')}/documents`;
 
-/**
- * Forward the raw file buffer(s) to common-service and return created document(s).
- * @param {Express.Multer.File[]} files  - multer memoryStorage files
- * @param {object} meta                  - { category, description, appointmentId, visibleTo }
- * @param {string} token                 - Bearer token from the original request
- */
-const uploadDocuments = async (files, meta, token) => {
+async function uploadPatientDocument({
+  buffer,
+  originalname,
+  mimetype,
+  category,
+  linkedPatientId,
+  description,
+  authorization
+}) {
   const form = new FormData();
+  form.append('files', buffer, { filename: originalname, contentType: mimetype });
+  form.append('category', category || 'other');
+  form.append('description', description || '');
+  form.append('linkedPatientId', linkedPatientId);
 
-  for (const file of files) {
-    form.append('files', file.buffer, {
-      filename: file.originalname,
-      contentType: file.mimetype
+  const formHeaders = form.getHeaders();
+  const contentLength = await new Promise((resolve, reject) => {
+    form.getLength((err, length) => {
+      if (err) reject(err);
+      else resolve(length);
     });
-  }
+  });
 
-  if (meta.category)      form.append('category', meta.category);
-  if (meta.description)   form.append('description', meta.description);
-  if (meta.appointmentId) form.append('appointmentId', meta.appointmentId);
-  if (meta.visibleTo && meta.visibleTo.length > 0) {
-    form.append('visibleTo', JSON.stringify(meta.visibleTo));
-  }
+  const { data } = await axios.post(BASE_URL, form, {
+    headers: {
+      ...formHeaders,
+      Authorization: authorization,
+      'Content-Length': contentLength
+    },
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity
+  });
 
-  try {
-    const { data } = await axios.post(DOCUMENTS_URL, form, {
-      headers: {
-        ...form.getHeaders(),
-        Authorization: `Bearer ${token}`
-      }
-    });
-    return data;
-  } catch (err) {
-    const status = err.response?.status || StatusCodes.BAD_GATEWAY;
-    const message = err.response?.data?.message || 'Failed to upload documents to common-service';
-    throw new ApiError(status, message);
+  const doc = Array.isArray(data) ? data[0] : data;
+  if (!doc?._id) {
+    throw new Error('Document store did not return a valid document ID');
   }
-};
+  return doc;
+}
+async function listPatientDocuments({ linkedPatientId, query, authorization }) {
+  const { data } = await axios.get(BASE_URL, {
+    headers: { Authorization: authorization },
+    params: { ...query, linkedPatientId }
+  });
+  return data;
+}
 
-/**
- * List documents from common-service accessible to the requester.
- * @param {object} query  - { category, appointmentId, page, limit }
- * @param {string} token  - Bearer token
- */
-const listDocuments = async (query, token) => {
-  try {
-    const { data } = await axios.get(DOCUMENTS_URL, {
-      headers: { Authorization: `Bearer ${token}` },
-      params: query
-    });
-    return data;
-  } catch (err) {
-    const status = err.response?.status || StatusCodes.BAD_GATEWAY;
-    const message = err.response?.data?.message || 'Failed to fetch documents from common-service';
-    throw new ApiError(status, message);
-  }
-};
+async function getPatientDocument({ documentId, authorization }) {
+  const { data, headers } = await axios.get(`${BASE_URL}/${documentId}`, {
+    headers: { Authorization: authorization },
+    responseType: 'arraybuffer'
+  });
+  return {
+    buffer: Buffer.from(data),
+    contentType: headers['content-type'],
+    contentDisposition: headers['content-disposition'],
+    contentLength: headers['content-length']
+  };
+}
 
-/**
- * Get a single document's metadata + inline content from common-service.
- * @param {string} documentId
- * @param {string} token
- */
-const getDocument = async (documentId, token) => {
-  try {
-    const { data, headers } = await axios.get(`${DOCUMENTS_URL}/${documentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'arraybuffer'
-    });
-    return { data, headers };
-  } catch (err) {
-    const status = err.response?.status || StatusCodes.BAD_GATEWAY;
-    const message = err.response?.data?.message || 'Failed to fetch document from common-service';
-    throw new ApiError(status, message);
-  }
-};
+async function downloadPatientDocument({ documentId, authorization }) {
+  const { data, headers } = await axios.get(`${BASE_URL}/${documentId}/download`, {
+    headers: { Authorization: authorization },
+    responseType: 'arraybuffer'
+  });
+  return {
+    buffer: Buffer.from(data),
+    contentType: headers['content-type'],
+    contentDisposition: headers['content-disposition'],
+    contentLength: headers['content-length']
+  };
+}
 
-/**
- * Download a document file from common-service.
- * @param {string} documentId
- * @param {string} token
- */
-const downloadDocument = async (documentId, token) => {
-  try {
-    const { data, headers } = await axios.get(`${DOCUMENTS_URL}/${documentId}/download`, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: 'arraybuffer'
-    });
-    return { data, headers };
-  } catch (err) {
-    const status = err.response?.status || StatusCodes.BAD_GATEWAY;
-    const message = err.response?.data?.message || 'Failed to download document from common-service';
-    throw new ApiError(status, message);
-  }
-};
-
-/**
- * Delete a document from common-service.
- * @param {string} documentId
- * @param {string} token
- */
-const deleteDocument = async (documentId, token) => {
-  try {
-    await axios.delete(`${DOCUMENTS_URL}/${documentId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-  } catch (err) {
-    const status = err.response?.status || StatusCodes.BAD_GATEWAY;
-    const message = err.response?.data?.message || 'Failed to delete document from common-service';
-    throw new ApiError(status, message);
-  }
-};
+async function deletePatientDocument({ documentId, authorization }) {
+  await axios.delete(`${BASE_URL}/${documentId}`, {
+    headers: { Authorization: authorization }
+  });
+}
 
 module.exports = {
-  uploadDocuments,
-  listDocuments,
-  getDocument,
-  downloadDocument,
-  deleteDocument
+  uploadPatientDocument,
+  listPatientDocuments,
+  getPatientDocument,
+  downloadPatientDocument,
+  deletePatientDocument
 };
