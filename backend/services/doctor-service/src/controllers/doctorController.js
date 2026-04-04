@@ -36,21 +36,24 @@ const slotItemSchema = Joi.object({
 });
 
 const scheduleSchema = Joi.object({
-  schedule: Joi.array()
-    .items(
-      Joi.object({
-        dayOfWeek: Joi.number().integer().min(0).max(6).required(),
-        startTime: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/).required(),
-        endTime: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/).required()
-      })
-    )
+  weekStartMonday: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
     .required()
+    .messages({ 'string.pattern.base': 'weekStartMonday must be YYYY-MM-DD (Monday of the week)' }),
+  schedule: Joi.array().items(slotItemSchema).required()
 });
 
 const createDoctor = asyncHandler(async (req, res) => {
   const { error, value } = createSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     throw new ApiError(StatusCodes.BAD_REQUEST, error.details.map((d) => d.message).join(', '));
+  }
+
+  if (!value.userId?.trim()) {
+    value.userId =
+      req.user.role === 'doctor'
+        ? req.user.id
+        : new mongoose.Types.ObjectId().toString();
   }
 
   if (req.user.role === 'doctor' && req.user.id !== value.userId) {
@@ -69,11 +72,25 @@ const createDoctor = asyncHandler(async (req, res) => {
 });
 
 const listDoctors = asyncHandler(async (_req, res) => {
-  const doctors = await Doctor.find({}).sort({ fullName: 1 });
+  const doctors = await Doctor.find({}).sort({ fullName: 1 }).lean();
   return res.status(StatusCodes.OK).json(doctors);
 });
 
 const getDoctorById = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findById(req.params.id).lean();
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  return res.status(StatusCodes.OK).json(doctor);
+});
+
+const updateDoctor = asyncHandler(async (req, res) => {
+  const { error, value } = updateProfileSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, error.details.map((d) => d.message).join(', '));
+  }
+
   const doctor = await Doctor.findById(req.params.id);
   if (!doctor) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
@@ -148,11 +165,37 @@ const updateDoctorSchedule = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
   }
 
-  if (req.user.role === 'doctor' && req.user.id !== doctor.userId) {
+  if (req.user.role === 'doctor' && !doctorMatchesActor(req.user.id, doctor)) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only update their own schedule');
   }
 
-  doctor.schedule = value.schedule;
+  const { weekStartMonday, schedule: weekSlots } = value;
+
+  if (!doctor.weeklyAvailability?.length && doctor.schedule?.length) {
+    const d = new Date();
+    const day = d.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    mon.setDate(mon.getDate() + offset);
+    mon.setHours(0, 0, 0, 0);
+    const y = mon.getFullYear();
+    const m = String(mon.getMonth() + 1).padStart(2, '0');
+    const dd = String(mon.getDate()).padStart(2, '0');
+    const curKey = `${y}-${m}-${dd}`;
+    doctor.weeklyAvailability = [{ weekStartMonday: curKey, slots: [...doctor.schedule] }];
+    doctor.schedule = [];
+  }
+
+  const list = [...(doctor.weeklyAvailability || [])];
+  const idx = list.findIndex((w) => w.weekStartMonday === weekStartMonday);
+  const entry = { weekStartMonday, slots: weekSlots };
+  if (idx >= 0) {
+    list[idx] = entry;
+  } else {
+    list.push(entry);
+  }
+  doctor.weeklyAvailability = list;
+  doctor.markModified('weeklyAvailability');
   await doctor.save();
 
   return res.status(StatusCodes.OK).json(doctor);

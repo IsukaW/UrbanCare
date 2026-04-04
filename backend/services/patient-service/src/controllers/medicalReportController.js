@@ -3,7 +3,13 @@ const { StatusCodes } = require('http-status-codes');
 const Patient = require('../models/Patient');
 const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
-const documentService = require('../services/MedicalReportService');
+const {
+  uploadPatientDocument,
+  listPatientDocuments,
+  getPatientDocument,
+  downloadPatientDocument,
+  deletePatientDocument
+} = require('../services/MedicalReportService');
 
 const VALID_CATEGORIES = [
   'prescription',
@@ -14,16 +20,12 @@ const VALID_CATEGORIES = [
   'other'
 ];
 
+// ── Validation schemas ────────────────────────────────────────────────────────
+
 const uploadSchema = Joi.object({
   category: Joi.string().valid(...VALID_CATEGORIES).default('other'),
   description: Joi.string().max(500).allow('').optional(),
-  appointmentId: Joi.string().optional(),
-  visibleTo: Joi.alternatives()
-    .try(
-      Joi.array().items(Joi.string()),
-      Joi.string()
-    )
-    .optional()
+  appointmentId: Joi.string().optional()
 });
 
 const listQuerySchema = Joi.object({
@@ -33,6 +35,9 @@ const listQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(20)
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Verify patient exists and requester has access. */
 const resolvePatient = async (patientId, user) => {
   const patient = await Patient.findById(patientId);
   if (!patient) {
@@ -44,23 +49,18 @@ const resolvePatient = async (patientId, user) => {
   return patient;
 };
 
-const extractToken = (req) => req.headers.authorization.split(' ')[1];
+// ── Controllers ───────────────────────────────────────────────────────────────
 
-const uploadDocuments = asyncHandler(async (req, res) => {
-  if (!req.files || req.files.length === 0) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one file is required');
+/**
+ * POST /patients/:patientId/documents
+ * Upload one medical document for a patient via common-service.
+ */
+const uploadDocument = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'A file is required');
   }
 
-  const rawMeta = { ...req.body };
-  if (typeof rawMeta.visibleTo === 'string') {
-    try {
-      rawMeta.visibleTo = JSON.parse(rawMeta.visibleTo);
-    } catch {
-      rawMeta.visibleTo = rawMeta.visibleTo.split(',').map((s) => s.trim()).filter(Boolean);
-    }
-  }
-
-  const { error, value } = uploadSchema.validate(rawMeta, {
+  const { error, value } = uploadSchema.validate(req.body, {
     abortEarly: false,
     stripUnknown: true
   });
@@ -73,11 +73,27 @@ const uploadDocuments = asyncHandler(async (req, res) => {
 
   await resolvePatient(req.params.patientId, req.user);
 
-  const docs = await documentService.uploadDocuments(req.files, value, extractToken(req));
+  try {
+    const doc = await uploadPatientDocument({
+      buffer: req.file.buffer,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      category: value.category,
+      linkedPatientId: req.params.patientId,
+      description: value.description || '',
+      authorization: req.headers.authorization
+    });
 
-  return res.status(StatusCodes.CREATED).json(docs);
+    return res.status(StatusCodes.CREATED).json(doc);
+  } catch (err) {
+    throw new ApiError(StatusCodes.BAD_GATEWAY, err.message);
+  }
 });
 
+/**
+ * GET /patients/:patientId/documents
+ * List all documents linked to this patient.
+ */
 const listDocuments = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 
@@ -92,50 +108,86 @@ const listDocuments = asyncHandler(async (req, res) => {
     );
   }
 
-  const result = await documentService.listDocuments(value, extractToken(req));
+  try {
+    const result = await listPatientDocuments({
+      linkedPatientId: req.params.patientId,
+      query: value,
+      authorization: req.headers.authorization
+    });
 
-  return res.status(StatusCodes.OK).json(result);
+    return res.status(StatusCodes.OK).json(result);
+  } catch (err) {
+    throw new ApiError(StatusCodes.BAD_GATEWAY, err.message);
+  }
 });
 
-
+/**
+ * GET /patients/:patientId/documents/:documentId
+ * View a single document inline in the browser.
+ */
 const getDocument = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 
-  const { data, headers } = await documentService.getDocument(
-    req.params.documentId,
-    extractToken(req)
-  );
+  try {
+    const { buffer, contentType, contentDisposition, contentLength } =
+      await getPatientDocument({
+        documentId: req.params.documentId,
+        authorization: req.headers.authorization
+      });
 
-  res.setHeader('Content-Type', headers['content-type']);
-  res.setHeader('Content-Disposition', headers['content-disposition']);
-  res.setHeader('Content-Length', headers['content-length']);
-  return res.end(Buffer.from(data));
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', contentDisposition);
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    return res.end(buffer);
+  } catch (err) {
+    throw new ApiError(StatusCodes.BAD_GATEWAY, err.message);
+  }
 });
 
+/**
+ * GET /patients/:patientId/documents/:documentId/download
+ * Download a document as a file attachment.
+ */
 const downloadDocument = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 
-  const { data, headers } = await documentService.downloadDocument(
-    req.params.documentId,
-    extractToken(req)
-  );
+  try {
+    const { buffer, contentType, contentDisposition, contentLength } =
+      await downloadPatientDocument({
+        documentId: req.params.documentId,
+        authorization: req.headers.authorization
+      });
 
-  res.setHeader('Content-Type', headers['content-type']);
-  res.setHeader('Content-Disposition', headers['content-disposition']);
-  res.setHeader('Content-Length', headers['content-length']);
-  return res.end(Buffer.from(data));
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', contentDisposition);
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    return res.end(buffer);
+  } catch (err) {
+    throw new ApiError(StatusCodes.BAD_GATEWAY, err.message);
+  }
 });
 
+/**
+ * DELETE /patients/:patientId/documents/:documentId
+ * Delete a document. Only uploader or admin.
+ */
 const deleteDocument = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 
-  await documentService.deleteDocument(req.params.documentId, extractToken(req));
+  try {
+    await deletePatientDocument({
+      documentId: req.params.documentId,
+      authorization: req.headers.authorization
+    });
 
-  return res.status(StatusCodes.NO_CONTENT).send();
+    return res.status(StatusCodes.NO_CONTENT).send();
+  } catch (err) {
+    throw new ApiError(StatusCodes.BAD_GATEWAY, err.message);
+  }
 });
 
 module.exports = {
-  uploadDocuments,
+  uploadDocument,
   listDocuments,
   getDocument,
   downloadDocument,
