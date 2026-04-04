@@ -32,6 +32,19 @@ export default function DoctorProfile() {
   };
 
   useEffect(() => {
+    if (!doctorId) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const url = await documentService.getViewUrl(profilePhotoDocumentId);
+      setPhotoUrl(url);
+    } catch {
+      setPhotoUrl(null);
+    }
+  };
+
+  useEffect(() => {
     doctorService
       .getById(user._id)
       .then((p) => {
@@ -42,6 +55,13 @@ export default function DoctorProfile() {
       .catch(() => setMode('create'))
       .finally(() => setLoading(false));
   }, [user._id]);
+
+  // Revoke blob URLs to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    };
+  }, [photoUrl]);
 
   // Revoke blob URLs to avoid memory leaks
   useEffect(() => {

@@ -28,4 +28,11 @@ export const doctorService = {
     const { data } = await doctorApi.uploadPhoto(id, form);
     return data.doctor ?? data;
   },
+
+  async uploadPhoto(id, file) {
+    const form = new FormData();
+    form.append('photo', file);
+    const { data } = await doctorApi.uploadPhoto(id, form);
+    return data.doctor ?? data;
+  },
 };
