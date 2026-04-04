@@ -1,49 +1,33 @@
 const Joi = require('joi');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { StatusCodes } = require('http-status-codes');
 const Doctor = require('../models/Doctor');
-const PendingDoctorRegistration = require('../models/PendingDoctorRegistration');
 const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
-const { env } = require('../config/env');
-const { parseProfilePhotoDataUrl } = require('../utils/profilePhoto');
+const { uploadDoctorDocument } = require('../services/documentService');
 
 /** Doctor may be addressed by internal userId (User._id) or by Doctor document _id (e.g. appointments use _id). */
 const doctorMatchesActor = (actorId, doctorDoc) =>
   doctorDoc.userId === actorId || doctorDoc._id.toString() === actorId;
 
-const BCRYPT_ROUNDS = 10;
-
 const createSchema = Joi.object({
   userId: Joi.string().trim().allow('', null).optional(),
-  username: Joi.string().trim().email().max(254).optional(),
-  password: Joi.string().min(8).max(128).optional(),
   fullName: Joi.string().min(2).max(120).required(),
   specialization: Joi.string().min(2).max(100).required(),
   qualifications: Joi.array().items(Joi.string().min(2).max(120)).optional(),
-  yearsOfExperience: Joi.number().min(0).max(80).optional(),
-  /** data:image/(jpeg|png|webp|gif);base64,... — max ~400KB decoded (validated in controller) */
-  profilePhoto: Joi.string().allow('', null).max(650000).optional()
+  yearsOfExperience: Joi.number().min(0).max(80).optional()
 });
 
 const updateProfileSchema = Joi.object({
   fullName: Joi.string().min(2).max(120),
   specialization: Joi.string().min(2).max(100),
   qualifications: Joi.array().items(Joi.string().min(2).max(120)),
-  yearsOfExperience: Joi.number().min(0).max(80),
-  profilePhoto: Joi.string().allow('', null).max(650000).optional()
+  yearsOfExperience: Joi.number().min(0).max(80)
 })
   .min(1)
   .messages({
     'object.min': 'At least one field is required to update'
   });
-
-const loginSchema = Joi.object({
-  email: Joi.string().trim().email().required(),
-  password: Joi.string().required()
-});
 
 const slotItemSchema = Joi.object({
   dayOfWeek: Joi.number().integer().min(0).max(6).required(),
@@ -81,94 +65,10 @@ const createDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.CONFLICT, 'Doctor profile already exists for this user');
   }
 
-  const { username, password, ...rest } = value;
-  const createPayload = { ...rest };
-
-  if (createPayload.profilePhoto !== undefined) {
-    createPayload.profilePhoto = parseProfilePhotoDataUrl(createPayload.profilePhoto);
-  }
-
-  if (req.user.role === 'admin') {
-    if (!username?.trim() || !password) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Email and password are required');
-    }
-    const normalizedUsername = username.trim().toLowerCase();
-    const usernameTaken = await Doctor.findOne({ username: normalizedUsername });
-    if (usernameTaken) {
-      throw new ApiError(StatusCodes.CONFLICT, 'This email is already registered');
-    }
-    createPayload.username = normalizedUsername;
-    createPayload.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  } else if (username?.trim() || password) {
-    if (!username?.trim() || !password) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Email and password must both be provided together');
-    }
-    const normalizedUsername = username.trim().toLowerCase();
-    const usernameTaken = await Doctor.findOne({ username: normalizedUsername });
-    if (usernameTaken) {
-      throw new ApiError(StatusCodes.CONFLICT, 'This email is already registered');
-    }
-    createPayload.username = normalizedUsername;
-    createPayload.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  }
+  const createPayload = { ...value };
 
   const doctor = await Doctor.create(createPayload);
   return res.status(StatusCodes.CREATED).json(doctor);
-});
-
-const loginDoctor = asyncHandler(async (req, res) => {
-  const { error, value } = loginSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
-  if (error) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, error.details.map((d) => d.message).join(', '));
-  }
-
-  const email = value.email.toLowerCase();
-  const doctor = await Doctor.findOne({ username: email }).select('+password');
-
-  if (!doctor?.password) {
-    const recent = await PendingDoctorRegistration.findOne({ email }).sort({ createdAt: -1 }).lean();
-    if (recent?.status === 'pending') {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Your registration is pending approval. You cannot sign in until an administrator approves your request.'
-      );
-    }
-    if (recent?.status === 'rejected') {
-      const reason = recent.rejectionReason ? ` ${recent.rejectionReason}` : '';
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        `Your registration was rejected by the system administrator.${reason}`
-      );
-    }
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
-  }
-
-  const ok = await bcrypt.compare(value.password, doctor.password);
-  if (!ok) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
-  }
-
-  const sub = doctor._id.toString();
-  const token = jwt.sign({ sub, email: doctor.username, role: 'doctor' }, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN
-  });
-
-  const parts = doctor.fullName.trim().split(/\s+/);
-  const firstName = parts[0] || 'Doctor';
-  const lastName = parts.slice(1).join(' ').trim() || firstName;
-
-  return res.status(StatusCodes.OK).json({
-    token,
-    user: {
-      id: sub,
-      _id: sub,
-      email: doctor.username,
-      firstName,
-      lastName,
-      fullName: doctor.fullName,
-      role: 'doctor'
-    }
-  });
 });
 
 const listDoctors = asyncHandler(async (_req, res) => {
@@ -200,15 +100,50 @@ const updateDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only update their own profile');
   }
 
-  const { profilePhoto, ...rest } = value;
+  const { ...rest } = value;
   Object.assign(doctor, rest);
-  if (profilePhoto !== undefined) {
-    doctor.profilePhoto = parseProfilePhotoDataUrl(profilePhoto);
-  }
   await doctor.save();
 
   const updated = await Doctor.findById(doctor._id).lean();
   return res.status(StatusCodes.OK).json(updated);
+});
+
+const uploadProfilePhoto = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'A profile photo image file is required');
+  }
+
+  const doctor = await Doctor.findById(req.params.id);
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  if (req.user.role === 'doctor' && !doctorMatchesActor(req.user.id, doctor)) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only upload their own profile photo');
+  }
+
+  let doc;
+  try {
+    doc = await uploadDoctorDocument({
+      buffer: req.file.buffer,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      linkedDoctorId: doctor._id.toString(),
+      description: `Profile photo for doctor ${doctor._id}`,
+      authorization: req.headers.authorization
+    });
+  } catch (err) {
+    throw new ApiError(StatusCodes.BAD_GATEWAY, `Failed to upload photo to document store: ${err.message}`);
+  }
+
+  doctor.profilePhotoDocumentId = doc._id;
+  await doctor.save();
+
+  return res.status(StatusCodes.OK).json({
+    profilePhotoDocumentId: doctor.profilePhotoDocumentId,
+    documentId: doc._id,
+    message: 'Profile photo uploaded successfully'
+  });
 });
 
 const deleteDoctor = asyncHandler(async (req, res) => {
@@ -268,10 +203,10 @@ const updateDoctorSchedule = asyncHandler(async (req, res) => {
 
 module.exports = {
   createDoctor,
-  loginDoctor,
   listDoctors,
   getDoctorById,
   updateDoctor,
   deleteDoctor,
-  updateDoctorSchedule
+  updateDoctorSchedule,
+  uploadProfilePhoto
 };

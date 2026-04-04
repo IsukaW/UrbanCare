@@ -12,21 +12,12 @@ const scheduleSlotSchema = new mongoose.Schema(
 const doctorSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, unique: true, index: true },
-    username: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      sparse: true,
-      unique: true,
-      index: true
-    },
-    password: { type: String, select: false },
     fullName: { type: String, required: true, trim: true },
     specialization: { type: String, required: true, trim: true },
     qualifications: { type: [String], default: [] },
     yearsOfExperience: { type: Number, min: 0, default: 0 },
-    /** Data URL (data:image/...;base64,...) — bounded size in controller */
-    profilePhoto: { type: String, default: '' },
+    /** Document _id from common-service — set after the doctor uploads a profile photo */
+    profilePhotoDocumentId: { type: String, default: null },
     /** @deprecated Use weeklyAvailability — kept for legacy clients */
     schedule: { type: [scheduleSlotSchema], default: [] },
     /** One entry per calendar week (Monday YYYY-MM-DD); slots apply only to that week */
@@ -42,13 +33,7 @@ const doctorSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    versionKey: false,
-    toJSON: {
-      transform(_doc, ret) {
-        delete ret.password;
-        return ret;
-      }
-    }
+    versionKey: false
   }
 );
 
