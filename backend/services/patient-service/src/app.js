@@ -5,10 +5,11 @@ const morgan = require('morgan');
 const pinoHttp = require('pino-http');
 const logger = require('./config/logger');
 const patientRoutes = require('./routes/patientRoutes');
+const medicalReportRoutes = require('./routes/medicalReportRoutes');
+const symptomCheckerRoutes = require('./routes/symptomCheckerRoutes');
 const { logSecurityHeaders } = require('./middleware/logSecurityHeaders');
 const { notFound } = require('./middleware/notFound');
 const { errorHandler } = require('./middleware/errorHandler');
-const medicalReportRoutes = require('./routes/medicalReportRoutes');
 
 const app = express();
 
@@ -35,7 +36,8 @@ app.use(
       })
     },
     customSuccessMessage: (req, res) => `${req.method} ${req.originalUrl} -> ${res.statusCode}`,
-    customErrorMessage: (req, res, err) => `${req.method} ${req.originalUrl} -> ${res.statusCode} (${err.message})`
+    customErrorMessage: (req, res, err) =>
+      `${req.method} ${req.originalUrl} -> ${res.statusCode} (${err.message})`
   })
 );
 app.use(logSecurityHeaders);
@@ -46,6 +48,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/patients', patientRoutes);
 app.use('/patients/:patientId/documents', medicalReportRoutes);
+app.use('/symptoms', symptomCheckerRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
