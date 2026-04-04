@@ -36,6 +36,7 @@ const uploadMetaSchema = Joi.object({
   category: Joi.string().valid(...VALID_CATEGORIES).default('other'),
   description: Joi.string().max(500).allow('').optional(),
   appointmentId: Joi.string().optional(),
+  linkedDoctorId: Joi.string().optional(),
   // Comma-separated list of userIds to share with at upload time
   visibleTo: Joi.alternatives()
     .try(
@@ -94,6 +95,7 @@ const uploadDocuments = asyncHandler(async (req, res) => {
       category: value.category,
       description: value.description || '',
       appointmentId: value.appointmentId || null,
+      linkedDoctorId: value.linkedDoctorId || null,
       visibleTo,
     }))
   );
@@ -131,6 +133,11 @@ const listDocuments = asyncHandler(async (req, res) => {
   // Optional appointment filter
   if (req.query.appointmentId) {
     filter.appointmentId = req.query.appointmentId;
+  }
+
+  // Optional doctor filter
+  if (req.query.linkedDoctorId) {
+    filter.linkedDoctorId = req.query.linkedDoctorId;
   }
 
   const [docs, total] = await Promise.all([

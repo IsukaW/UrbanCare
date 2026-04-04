@@ -38,6 +38,9 @@ const documentSchema = new mongoose.Schema(
     // Optional link to an appointment (helps both parties filter docs per visit)
     appointmentId: { type: String, default: null, index: true },
 
+    // Optional link to a doctor profile (used for profile photos and doctor-specific docs)
+    linkedDoctorId: { type: String, default: null, index: true },
+
     // Other users who may read/download this document (besides the uploader + admin)
     visibleTo: {
       type: [String], // array of userIds

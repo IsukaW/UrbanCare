@@ -11,4 +11,19 @@ export const userService = {
     const { data } = await userApi.update(id, payload);
     return data.user ?? data;
   },
+
+  async listAll(params = {}) {
+    const { data } = await userApi.list(params);
+    return data.users ?? data;
+  },
+
+  async approve(id) {
+    const { data } = await userApi.approve(id);
+    return data.user ?? data;
+  },
+
+  async reject(id, message) {
+    const { data } = await userApi.reject(id, message);
+    return data.user ?? data;
+  },
 };
