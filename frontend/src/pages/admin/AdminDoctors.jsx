@@ -33,8 +33,10 @@ function buildDoctorPayload(values) {
 export default function AdminDoctors() {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingDoctor, setEditingDoctor] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [form] = Form.useForm();
 
   const load = () => {
@@ -48,7 +50,34 @@ export default function AdminDoctors() {
 
   useEffect(load, []);
 
-  const handleCreate = async (values) => {
+  useEffect(() => {
+    if (!modalOpen || !editingDoctor) return;
+    form.setFieldsValue({
+      fullName: editingDoctor.fullName,
+      specialization: editingDoctor.specialization,
+      qualifications: editingDoctor.qualifications?.join(', ') ?? '',
+      yearsOfExperience: editingDoctor.yearsOfExperience,
+    });
+  }, [modalOpen, editingDoctor, form]);
+
+  const openCreate = () => {
+    setEditingDoctor(null);
+    form.resetFields();
+    setModalOpen(true);
+  };
+
+  const openEdit = (record) => {
+    setEditingDoctor(record);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingDoctor(null);
+    form.resetFields();
+  };
+
+  const handleSubmit = async (values) => {
     setSaving(true);
     try {
       const payload = buildDoctorPayload(values);
@@ -62,7 +91,7 @@ export default function AdminDoctors() {
       closeModal();
       load();
     } catch (e) {
-      notify.error('Create failed', e.message);
+      notify.error(editingDoctor ? 'Update failed' : 'Create failed', e.message);
     } finally {
       setSaving(false);
     }
@@ -93,15 +122,25 @@ export default function AdminDoctors() {
       title: 'Experience',
       dataIndex: 'yearsOfExperience',
       key: 'yearsOfExperience',
-      render: (v) => `${v} yrs`,
+      width: 100,
+      render: (v) => `${v ?? 0} yrs`,
     },
     {
       title: 'Qualifications',
       key: 'qualifications',
+      ellipsis: true,
       render: (_, r) =>
-        r.qualifications?.map((q) => (
-          <Tag key={q}>{q}</Tag>
-        )) ?? '—',
+        r.qualifications?.length ? (
+          <span className="inline-flex flex-wrap gap-1">
+            {r.qualifications.map((q) => (
+              <Tag key={q} className="m-0">
+                {q}
+              </Tag>
+            ))}
+          </span>
+        ) : (
+          '—'
+        ),
     },
     {
       title: 'Schedule',
@@ -180,9 +219,9 @@ export default function AdminDoctors() {
       </Card>
 
       <Modal
-        title="Create Doctor Profile"
-        open={modal}
-        onCancel={() => setModal(false)}
+        title={editingDoctor ? 'Edit doctor' : 'Create doctor profile'}
+        open={modalOpen}
+        onCancel={closeModal}
         footer={null}
         destroyOnClose
       >
@@ -213,13 +252,13 @@ export default function AdminDoctors() {
           <Form.Item name="qualifications" label="Qualifications (comma separated)">
             <Input placeholder="MBBS, MD" />
           </Form.Item>
-          <Form.Item name="yearsOfExperience" label="Years of Experience">
+          <Form.Item name="yearsOfExperience" label="Years of experience">
             <Input type="number" min={0} />
           </Form.Item>
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setModal(false)}>Cancel</Button>
+            <Button onClick={closeModal}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={saving}>
-              Create
+              {editingDoctor ? 'Save changes' : 'Create'}
             </Button>
           </div>
         </Form>

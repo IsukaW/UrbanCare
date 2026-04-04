@@ -93,7 +93,7 @@ export default function RegisterPage() {
             <span className="text-white font-bold text-2xl">U</span>
           </div>
           <Title level={2} style={{ margin: 0 }}>
-            Create Account
+            {mode === 'doctor' ? 'Doctor Registration' : 'Create Account'}
           </Title>
           <Text type="secondary" className="text-sm">
             {mode === 'doctor'
