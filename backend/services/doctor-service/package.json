@@ -9,6 +9,7 @@
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
@@ -19,7 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.1",
     "morgan": "^1.10.0",
-    "multer": "^2.1.1",
+    "multer": "^1.4.5-lts.1",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
     "pino-pretty": "^13.0.0"
