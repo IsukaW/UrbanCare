@@ -70,6 +70,13 @@ export default function DoctorProfile() {
     };
   }, [photoUrl]);
 
+  // Revoke blob URLs to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    };
+  }, [photoUrl]);
+
   const handleCreate = async (values) => {
     setSaving(true);
     try {
