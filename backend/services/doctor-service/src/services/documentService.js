@@ -16,7 +16,7 @@ const { env } = require('../config/env');
 async function uploadDoctorDocument({ buffer, originalname, mimetype, linkedDoctorId, description, authorization }) {
   const form = new FormData();
   form.append('files', buffer, { filename: originalname, contentType: mimetype });
-  form.append('category', 'other');
+  form.append('category', 'profile_photo');
   form.append('description', description);
   form.append('linkedDoctorId', linkedDoctorId);
 
