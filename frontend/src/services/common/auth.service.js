@@ -3,7 +3,7 @@ import { tokenUtil } from '../../utils/token';
 
 // Handles login/register logic and keeps the token saved
 export const authService = {
-  // Register a new account and save the returned token
+  // Register a new account. Doctors/patients get status=pending — no token is returned.
   async register(payload) {
     const { data } = await authApi.register(payload);
     if (data.token) {
