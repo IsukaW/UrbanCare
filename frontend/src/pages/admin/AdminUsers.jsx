@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Table, Tag, Typography, Card, Input, Select, Space, Button, Modal, Form } from 'antd';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Table, Tag, Typography, Card, Select, Space, Button, Modal, Form, Input } from 'antd';
 import { notify } from '../../utils/notify';
-import { SearchOutlined, EditOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
 import { userService } from '../../services/common/user.service';
 import useAuthStore from '../../store/authStore';
 import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
@@ -9,37 +9,93 @@ import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
 const { Title } = Typography;
 const { Option } = Select;
 
-// Admin can view users by ID — backend doesn't expose list-all-users, so we show
-// a search-by-ID panel and the ability to update user details.
+const STATUS_COLORS = {
+  pending: 'orange',
+  approved: 'green',
+  rejected: 'red',
+};
+
+// Admin can view, filter, approve and reject all users
 export default function AdminUsers() {
   const currentUser = useAuthStore((s) => s.user);
-  const [searchId, setSearchId] = useState('');
-  const [foundUser, setFoundUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [roleFilter, setRoleFilter] = useState(undefined);
+  const [statusFilter, setStatusFilter] = useState(undefined);
+  const [acting, setActing] = useState(null);
+
+  const [rejectModal, setRejectModal] = useState(false);
+  const [rejectingUser, setRejectingUser] = useState(null);
+  const [rejectMessage, setRejectMessage] = useState('');
 
   const [editModal, setEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
-  const handleSearch = async () => {
-    if (!searchId.trim()) return;
+  const load = useCallback(async () => {
     setLoading(true);
-    setFoundUser(null);
     try {
-      const user = await userService.getById(searchId.trim());
-      setFoundUser(user);
+      const params = {};
+      if (roleFilter) params.role = roleFilter;
+      if (statusFilter) params.status = statusFilter;
+      const data = await userService.listAll(params);
+      setUsers(data);
     } catch (e) {
-      notify.error('Search failed', e.message);
+      notify.error('Failed to load users', e.message);
     } finally {
       setLoading(false);
     }
+  }, [roleFilter, statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleApprove = async (record) => {
+    setActing(record._id);
+    try {
+      await userService.approve(record._id);
+      notify.success('Approved', `${record.firstName} ${record.lastName} has been approved.`);
+      load();
+    } catch (e) {
+      notify.error('Approve failed', e.message);
+    } finally {
+      setActing(null);
+    }
   };
 
-  const openEdit = () => {
+  const openReject = (record) => {
+    setRejectingUser(record);
+    setRejectMessage('');
+    setRejectModal(true);
+  };
+
+  const confirmReject = async () => {
+    if (!rejectingUser) return;
+    const msg = rejectMessage.trim();
+    if (!msg) {
+      notify.error('Message required', 'Please enter a rejection message.');
+      return;
+    }
+    setActing(rejectingUser._id);
+    try {
+      await userService.reject(rejectingUser._id, msg);
+      notify.success('Rejected', `${rejectingUser.firstName} ${rejectingUser.lastName} has been rejected.`);
+      setRejectModal(false);
+      setRejectingUser(null);
+      load();
+    } catch (e) {
+      notify.error('Reject failed', e.message);
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const openEdit = (record) => {
+    setEditingUser(record);
     form.setFieldsValue({
-      firstName: foundUser.firstName,
-      lastName: foundUser.lastName,
-      phoneNumber: foundUser.phoneNumber,
+      firstName: record.firstName,
+      lastName: record.lastName,
+      phoneNumber: record.phoneNumber,
     });
     setEditModal(true);
   };
@@ -47,10 +103,10 @@ export default function AdminUsers() {
   const handleSave = async (values) => {
     setSaving(true);
     try {
-      const updated = await userService.update(foundUser._id, values);
-      setFoundUser(updated);
+      await userService.update(editingUser._id, values);
       notify.success('User updated', 'Changes saved successfully.');
       setEditModal(false);
+      load();
     } catch (e) {
       notify.error('Update failed', e.message);
     } finally {
@@ -58,62 +114,146 @@ export default function AdminUsers() {
     }
   };
 
-  const fields = foundUser
-    ? [
-        { label: 'ID', value: foundUser._id },
-        { label: 'Full Name', value: foundUser.fullName },
-        { label: 'Email', value: foundUser.email },
-        { label: 'Role', value: <Tag color={ROLE_COLORS[foundUser.role]}>{ROLE_LABELS[foundUser.role]}</Tag> },
-        { label: 'Phone', value: foundUser.phoneNumber || '—' },
-        { label: 'Created', value: foundUser.createdAt ? new Date(foundUser.createdAt).toLocaleDateString() : '—' },
-      ]
-    : [];
+  const columns = [
+    {
+      title: 'Name',
+      key: 'name',
+      render: (_, r) => `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || '—',
+      ellipsis: true,
+    },
+    { title: 'Email', dataIndex: 'email', key: 'email', ellipsis: true },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role',
+      width: 100,
+      render: (v) => <Tag color={ROLE_COLORS[v]}>{ROLE_LABELS[v] ?? v}</Tag>,
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (v) => (
+        <Tag color={STATUS_COLORS[v] ?? 'default'} className="capitalize">
+          {v ?? '—'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Created',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 110,
+      render: (v) => (v ? new Date(v).toLocaleDateString() : '—'),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 200,
+      render: (_, record) => (
+        <Space size="small" wrap>
+          {record.status === 'pending' && (
+            <>
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                loading={acting === record._id}
+                onClick={() => handleApprove(record)}
+              >
+                Approve
+              </Button>
+              <Button
+                danger
+                size="small"
+                icon={<CloseOutlined />}
+                disabled={acting === record._id}
+                onClick={() => openReject(record)}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          {record._id !== currentUser?._id && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+              Edit
+            </Button>
+          )}
+        </Space>
+      ),
+    },
+  ];
 
   return (
     <div className="p-6">
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <Title level={3} style={{ margin: 0 }}>
           User Management
         </Title>
+        <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>
+          Refresh
+        </Button>
       </div>
 
-      <Card className="rounded-2xl shadow-sm border-0 mb-6">
-        <Space.Compact block style={{ maxWidth: 480 }}>
-          <Input
-            placeholder="Enter User ID"
-            value={searchId}
-            onChange={(e) => setSearchId(e.target.value)}
-            onPressEnter={handleSearch}
-            size="large"
-            prefix={<SearchOutlined />}
-          />
-          <Button type="primary" size="large" loading={loading} onClick={handleSearch}>
-            Search
-          </Button>
-        </Space.Compact>
+      <Card className="rounded-2xl shadow-sm border-0">
+        <Space wrap className="mb-4">
+          <Select
+            placeholder="Filter by role"
+            allowClear
+            style={{ width: 160 }}
+            onChange={setRoleFilter}
+          >
+            <Option value="admin">Admin</Option>
+            <Option value="doctor">Doctor</Option>
+            <Option value="patient">Patient</Option>
+          </Select>
+          <Select
+            placeholder="Filter by status"
+            allowClear
+            style={{ width: 160 }}
+            onChange={setStatusFilter}
+          >
+            <Option value="pending">Pending</Option>
+            <Option value="approved">Approved</Option>
+            <Option value="rejected">Rejected</Option>
+          </Select>
+        </Space>
+
+        <Table
+          columns={columns}
+          dataSource={users}
+          loading={loading}
+          rowKey="_id"
+          pagination={{ pageSize: 10 }}
+          size="middle"
+        />
       </Card>
 
-      {foundUser && (
-        <Card
-          className="rounded-2xl shadow-sm border-0"
-          title="User Details"
-          extra={
-            <Button icon={<EditOutlined />} onClick={openEdit}>
-              Edit
-            </Button>
-          }
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {fields.map(({ label, value }) => (
-              <div key={label}>
-                <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">{label}</div>
-                <div className="font-medium">{value}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      {/* Reject Modal */}
+      <Modal
+        title="Reject User"
+        open={rejectModal}
+        onCancel={() => { setRejectModal(false); setRejectingUser(null); }}
+        okText="Reject"
+        okButtonProps={{ danger: true, loading: acting === rejectingUser?._id }}
+        onOk={confirmReject}
+        destroyOnClose
+      >
+        <p className="mb-3 text-neutral-600">
+          This message will be emailed to <strong>{rejectingUser?.email}</strong>.
+        </p>
+        <Input.TextArea
+          value={rejectMessage}
+          onChange={(e) => setRejectMessage(e.target.value)}
+          placeholder="Enter rejection reason (min 10 characters)..."
+          rows={4}
+          maxLength={500}
+          showCount
+        />
+      </Modal>
 
+      {/* Edit Modal */}
       <Modal
         title="Edit User"
         open={editModal}

@@ -1,0 +1,1726 @@
+{
+  "info": {
+    "_postman_id": "69eb3216-06ef-4797-9e9a-4ed3362ac05a",
+    "name": "Hospital Appointment System",
+    "description": "API collection for Common, Appointment, Doctor, and Patient services with firstName/lastName user fields.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "27956172",
+    "_collection_link": "https://go.postman.co/collection/27956172-69eb3216-06ef-4797-9e9a-4ed3362ac05a?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Common - Auth",
+      "item": [
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@hospital.com\",\n  \"password\": \"AdminPass123!\",\n  \"firstName\": \"System\",\n  \"lastName\": \"Admin\",\n  \"role\": \"admin\",\n  \"phoneNumber\": \"+10000000001\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/auth/register",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"admin@hospital.com\",\"password\":\"AdminPass123!\",\"firstName\":\"System\",\"lastName\":\"Admin\",\"role\":\"admin\",\"phoneNumber\":\"+10000000001\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Register Doctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"doctor@hospital.com\",\n  \"password\": \"DoctorPass123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"role\": \"doctor\",\n  \"phoneNumber\": \"+10000000002\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/auth/register",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"doctor@hospital.com\",\"password\":\"DoctorPass123!\",\"firstName\":\"John\",\"lastName\":\"Doe\",\"role\":\"doctor\",\"phoneNumber\":\"+10000000002\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Register Patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient@hospital.com\",\n  \"password\": \"PatientPass123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Patient\",\n  \"role\": \"patient\",\n  \"phoneNumber\": \"+10000000003\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/auth/register",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"patient@hospital.com\",\"password\":\"PatientPass123!\",\"firstName\":\"Jane\",\"lastName\":\"Patient\",\"role\":\"patient\",\"phoneNumber\":\"+10000000003\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"Abc@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/auth/login",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@hospital.com\",\"password\":\"AdminPass123!\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Login Doctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"doctor@gmail.com\",\n  \"password\": \"Abc@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/auth/login",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"doctor@hospital.com\",\"password\":\"DoctorPass123!\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Login Patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient@hospital.com\",\n  \"password\": \"PatientPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/auth/login",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"patient@hospital.com\",\"password\":\"PatientPass123!\"}'"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Common - Users & Notifications",
+      "item": [
+        {
+          "name": "List All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{common_base}}/users",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "doctor",
+                  "description": "Filter by role: admin | doctor | patient",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Filter by status: pending | approved | rejected",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Admin-only. Returns all users. Use ?role=doctor&status=pending to filter pending doctor registrations."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{common_base}}/users/{{doctor_user_id}}/approve",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "users",
+                "{{doctor_user_id}}",
+                "approve"
+              ]
+            },
+            "description": "Admin-only. Approves a pending doctor or patient account. A role-based detailed approval email is automatically sent — no request body required."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"After reviewing your registration, we are unable to approve your account at this time. The submitted credentials and qualifications did not meet our current requirements. Please ensure all documents are valid and reapply.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{common_base}}/users/{{doctor_user_id}}/reject",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "users",
+                "{{doctor_user_id}}",
+                "reject"
+              ]
+            },
+            "description": "Admin-only. Rejects a pending doctor or patient account. The 'message' field is required — admin must provide the rejection reason. The message is wrapped in a full professional email and sent to the user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{common_base}}/users/{{patient_user_id}}",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "users",
+                "{{patient_user_id}}"
+              ]
+            },
+            "description": "curl -X GET {{common_base}}/users/{{patient_user_id}} -H 'Authorization: Bearer {{admin_token}}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Patient-Updated\",\n  \"phoneNumber\": \"+10000000033\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/users/{{patient_user_id}}",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "users",
+                "{{patient_user_id}}"
+              ]
+            },
+            "description": "curl -X PATCH {{common_base}}/users/{{patient_user_id}} -H 'Authorization: Bearer {{patient_token}}' -H 'Content-Type: application/json' -d '{\"firstName\":\"Jane\",\"lastName\":\"Patient-Updated\",\"phoneNumber\":\"+10000000033\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"isuka1minjaya@gmail.com\",\n  \"subject\": \"Welcome\",\n  \"text\": \"Your Message has been confirmend\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/notify/email",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "notify",
+                "email"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/notify/email -H 'Authorization: Bearer {{admin_token}}' -H 'Content-Type: application/json' -d '{\"to\":\"patient@hospital.com\",\"subject\":\"Welcome\",\"text\":\"Welcome to UrbanCare\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Payment Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\"amount\": 25.50,\n\"currency\": \"usd\",\n\"description\": \"Appointment payment\",\n\"appointmentId\": \"APPT-1001\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/payments/intent",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "payments",
+                "intent"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/notify/email -H 'Authorization: Bearer {{admin_token}}' -H 'Content-Type: application/json' -d '{\"to\":\"patient@hospital.com\",\"subject\":\"Welcome\",\"text\":\"Welcome to UrbanCare\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm PaymentIntent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\"paymentMethod\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/payments/intent/{{paymentIntentId}}/confirm",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "payments",
+                "intent",
+                "{{paymentIntentId}}",
+                "confirm"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/notify/email -H 'Authorization: Bearer {{admin_token}}' -H 'Content-Type: application/json' -d '{\"to\":\"patient@hospital.com\",\"subject\":\"Welcome\",\"text\":\"Welcome to UrbanCare\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify PaymentIntent",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_NEW_JWT"
+              }
+            ],
+            "url": {
+              "raw": "{{common_base}}/payments/intent/{{paymentIntentId}}",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "payments",
+                "intent",
+                "{{paymentIntentId}}"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/notify/email -H 'Authorization: Bearer {{admin_token}}' -H 'Content-Type: application/json' -d '{\"to\":\"patient@hospital.com\",\"subject\":\"Welcome\",\"text\":\"Welcome to UrbanCare\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Send SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"+94779055109\",\n  \"body\": \"Appointment reminder\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/notify/sms",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "notify",
+                "sms"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/notify/sms -H 'Authorization: Bearer {{admin_token}}' -H 'Content-Type: application/json' -d '{\"to\":\"+10000000003\",\"body\":\"Appointment reminder\"}'"
+          },
+          "response": []
+        },
+        {
+          "name": "Video Conference",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channelName\": \"appointment_abc123\",\n  \"uid\": 1001,\n  \"role\": \"publisher\"\n}"
+            },
+            "url": {
+              "raw": "{{common_base}}/video/token",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "video",
+                "token"
+              ]
+            },
+            "description": "curl -X POST {{common_base}}/notify/sms -H 'Authorization: Bearer {{admin_token}}' -H 'Content-Type: application/json' -d '{\"to\":\"+10000000003\",\"body\":\"Appointment reminder\"}'"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Doctor Service",
+      "item": [
+        {
+          "name": "Create Doctor Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{doctor_user_id}}\",\n  \"fullName\": \"Dr John Doe\",\n  \"specialization\": \"Cardiology\",\n  \"qualifications\": [\"MBBS\", \"MD\"],\n  \"yearsOfExperience\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{doctor_base}}/doctors",
+              "host": [
+                "{{doctor_base}}"
+              ],
+              "path": [
+                "doctors"
+              ]
+            },
+            "description": "Creates the doctor's extended profile after their account is approved in common-service. Auth is obtained from common-service POST /auth/login."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Doctor Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Dr John A. Doe\",\n  \"specialization\": \"Cardiology\",\n  \"qualifications\": [\"MBBS\", \"MD\", \"FACC\"],\n  \"yearsOfExperience\": 13\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{doctor_base}}/doctors/{{doctor_profile_id}}",
+              "host": [
+                "{{doctor_base}}"
+              ],
+              "path": [
+                "doctors",
+                "{{doctor_profile_id}}"
+              ]
+            },
+            "description": "Doctor or admin can update profile fields. To update the profile photo use the dedicated POST /:id/photo endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Doctor Profile Photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": "/path/to/profile.jpg",
+                  "description": "JPEG, PNG or WebP image. Max 5 MB."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{doctor_base}}/doctors/{{doctor_profile_id}}/photo",
+              "host": [
+                "{{doctor_base}}"
+              ],
+              "path": [
+                "doctors",
+                "{{doctor_profile_id}}",
+                "photo"
+              ]
+            },
+            "description": "Uploads the doctor's profile photo. The image is stored in common-service document store linked to this doctor. Returns the common-service documentId which is also saved as profilePhotoDocumentId on the doctor profile. Retrieve the image via GET {{common_base}}/documents/:documentId."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Doctor Documents (common-service)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{common_base}}/documents?linkedDoctorId={{doctor_profile_id}}",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "linkedDoctorId",
+                  "value": "{{doctor_profile_id}}",
+                  "description": "Filter documents linked to this doctor (e.g. profile photo)"
+                }
+              ]
+            },
+            "description": "Returns all documents linked to the given doctor ID, including the profile photo."
+          },
+          "response": []
+        },
+        {
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{doctor_base}}/doctors",
+              "host": [
+                "{{doctor_base}}"
+              ],
+              "path": [
+                "doctors"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Doctor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{doctor_base}}/doctors/{{doctor_profile_id}}",
+              "host": [
+                "{{doctor_base}}"
+              ],
+              "path": [
+                "doctors",
+                "{{doctor_profile_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Doctor Schedule",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStartMonday\": \"2026-04-06\",\n  \"schedule\": [\n    { \"dayOfWeek\": 1, \"startTime\": \"09:00\", \"endTime\": \"12:00\" },\n    { \"dayOfWeek\": 3, \"startTime\": \"14:00\", \"endTime\": \"17:00\" },\n    { \"dayOfWeek\": 5, \"startTime\": \"09:00\", \"endTime\": \"11:00\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{doctor_base}}/doctors/{{doctor_profile_id}}/schedule",
+              "host": [
+                "{{doctor_base}}"
+              ],
+              "path": [
+                "doctors",
+                "{{doctor_profile_id}}",
+                "schedule"
+              ]
+            },
+            "description": "Sets availability slots for a specific calendar week. weekStartMonday must be the Monday of the target week in YYYY-MM-DD format. dayOfWeek: 0=Sun, 1=Mon … 6=Sat."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Doctor (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{doctor_base}}/doctors/{{doctor_profile_id}}",
+              "host": [
+                "{{doctor_base}}"
+              ],
+              "path": [
+                "doctors",
+                "{{doctor_profile_id}}"
+              ]
+            },
+            "description": "Admin-only. Permanently deletes the doctor profile document."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Patient Service",
+      "item": [
+        {
+          "name": "Create Patient Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{patient_user_id}}\",\n  \"fullName\": \"Jane Patient\",\n  \"dateOfBirth\": \"1999-05-10T00:00:00.000Z\",\n  \"bloodType\": \"A+\",\n  \"allergies\": [\"Pollen\"]\n}"
+            },
+            "url": {
+              "raw": "{{patient_base}}/patients",
+              "host": [
+                "{{patient_base}}"
+              ],
+              "path": [
+                "patients"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Patient",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{patient_base}}/patients/{{patient_profile_id}}",
+              "host": [
+                "{{patient_base}}"
+              ],
+              "path": [
+                "patients",
+                "{{patient_profile_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Medical History",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnosis\": \"Hypertension\",\n  \"treatment\": \"Lifestyle changes\",\n  \"notes\": \"Follow-up in 4 weeks\"\n}"
+            },
+            "url": {
+              "raw": "{{patient_base}}/patients/{{patient_profile_id}}/history",
+              "host": [
+                "{{patient_base}}"
+              ],
+              "path": [
+                "patients",
+                "{{patient_profile_id}}",
+                "history"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Appointment Service",
+      "item": [
+        {
+          "name": "Cancellation of appoinment",
+          "item": [
+            {
+              "name": "Patient Requests Cancellation",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer $PATIENT_TOKEN"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"I have a scheduling conflict and cannot attend\"\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3001/appointments/APPOINTMENT_ID/request-cancellation",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3001",
+                  "path": [
+                    "appointments",
+                    "APPOINTMENT_ID",
+                    "request-cancellation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin Approves Cancellation",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer $ADMIN_TOKEN"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"approvalStatus\": \"approve_cancellation\",\n    \"adminNotes\": \"Cancellation approved as per patient request\"\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3001/appointments/APPOINTMENT_ID/approve-cancellation",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3001",
+                  "path": [
+                    "appointments",
+                    "APPOINTMENT_ID",
+                    "approve-cancellation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Admin Offers Reschedule Instead",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer $ADMIN_TOKEN"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"approvalStatus\": \"offer_reschedule\",\n    \"adminNotes\": \"We have an available slot next week\",\n    \"alternativeSlotId\": \"NEW_SLOT_ID\",\n    \"alternativeDate\": \"2025-06-17T09:00:00.000Z\",\n    \"alternativeDoctorId\": \"SAME_OR_NEW_DOCTOR_ID\"\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3001/appointments/APPOINTMENT_ID/approve-cancellation",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3001",
+                  "path": [
+                    "appointments",
+                    "APPOINTMENT_ID",
+                    "approve-cancellation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Patient Confirms Reschedule",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer $PATIENT_TOKEN"
+                  }
+                ],
+                "url": {
+                  "raw": "http://localhost:3001/appointments/APPOINTMENT_ID/confirm-reschedule",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3001",
+                  "path": [
+                    "appointments",
+                    "APPOINTMENT_ID",
+                    "confirm-reschedule"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Get Appointment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{appointment_base}}/appointments/{{appointment_id}}",
+              "host": [
+                "{{appointment_base}}"
+              ],
+              "path": [
+                "appointments",
+                "{{appointment_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Appointment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer $PATIENT_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"scheduledAt\": \"2025-06-12T11:00:00.000Z\",\n    \"reason\": \"Updated reason for visit\",\n    \"type\": \"video\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{appointment_base}}/appointments/APPOINTMENT_ID",
+              "host": [
+                "{{appointment_base}}"
+              ],
+              "path": [
+                "appointments",
+                "APPOINTMENT_ID"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Appointment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{appointment_base}}/appointments/{{appointment_id}}",
+              "host": [
+                "{{appointment_base}}"
+              ],
+              "path": [
+                "appointments",
+                "{{appointment_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Doctors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer{{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{appointment_base}}/appointments/search",
+              "host": [
+                "{{appointment_base}}"
+              ],
+              "path": [
+                "appointments",
+                "search"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search by Specialty",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5002/appointments/search?specialty=Cardiology",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "appointments",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "specialty",
+                  "value": "Cardiology"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search by Specialty + Date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5002/appointments/search?specialty=Cardiology&date=2025-06-10",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "appointments",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "specialty",
+                  "value": "Cardiology"
+                },
+                {
+                  "key": "date",
+                  "value": "2025-06-10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Book Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer{{patient_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"patientId\": \"PATIENT_ID\",\n    \"doctorId\": \"DOCTOR_ID\",\n    \"slotId\": \"SLOT_ID\",\n    \"type\": \"in-person\",\n    \"scheduledAt\": \"2025-06-10T09:00:00.000Z\",\n    \"reason\": \"Chest pain and shortness of breath\",\n    \"patientEmail\": \"patient@hospital.com\",\n    \"patientPhoneNumber\": \"+10000000003\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5002/appointments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "appointments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Book Appointment (with medical report)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer $PATIENT_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"patientId\": \"PATIENT_ID\",\n    \"doctorId\": \"DOCTOR_ID\",\n    \"slotId\": \"SLOT_ID\",\n    \"type\": \"video\",\n    \"scheduledAt\": \"2025-06-10T10:00:00.000Z\",\n    \"reason\": \"Follow-up consultation\",\n    \"patientEmail\": \"patient@example.com\",\n    \"medicalReports\": [\n      {\n        \"fileName\": \"blood_test.pdf\",\n        \"fileData\": \"base64encodedstring==\"\n      }\n    ]\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5002/appointments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5002",
+              "path": [
+                "appointments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All My Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer $PATIENT_TOKEN"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/appointments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "appointments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List by Patient ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer $PATIENT_TOKEN"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/appointments?patientId=PATIENT_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "PATIENT_ID"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List by Doctor ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer $DOCTOR_TOKEN"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/appointments?doctorId=DOCTOR_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "doctorId",
+                  "value": "DOCTOR_ID"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List by Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer $PATIENT_TOKEN"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/appointments?patientId=PATIENT_ID&status=pending",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "PATIENT_ID"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Appointment Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer $PATIENT_TOKEN"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/appointments/APPOINTMENT_ID/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "appointments",
+                "APPOINTMENT_ID",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark as Confirmed (Doctor/Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer $DOCTOR_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"confirmed\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3001/appointments/APPOINTMENT_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "appointments",
+                "APPOINTMENT_ID"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark as Completed (Doctor/Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer $DOCTOR_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"completed\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3001/appointments/APPOINTMENT_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "appointments",
+                "APPOINTMENT_ID"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Common - Documents",
+      "item": [
+        {
+          "name": "Upload a single file",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer <your_jwt_token>"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "type": "file",
+                  "key": "files",
+                  "src": "/path/to/file.pdf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{common_base}}/documents",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "documents"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload with all optional fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "type": "file",
+                  "key": "files",
+                  "src": "/path/to/report.pdf"
+                },
+                {
+                  "type": "text",
+                  "key": "category",
+                  "value": "lab_report"
+                },
+                {
+                  "type": "text",
+                  "key": "description",
+                  "value": "Blood test results"
+                },
+                {
+                  "type": "text",
+                  "key": "appointmentId",
+                  "value": "appointment_id_here"
+                },
+                {
+                  "type": "text",
+                  "key": "visibleTo",
+                  "value": "[\"user_id_1\",\"user_id_2\"]"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{common_base}}/documents",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "documents"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload multiple files",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "type": "file",
+                  "key": "files",
+                  "src": "/path/to/file1.pdf"
+                },
+                {
+                  "type": "file",
+                  "key": "files",
+                  "src": "/path/to/file2.jpg"
+                },
+                {
+                  "type": "text",
+                  "key": "category",
+                  "value": "medical_record"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{common_base}}/documents",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "documents"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get document",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{common_base}}/documents/{{document_id}}",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patient_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{common_base}}/documents/{{document_id}}",
+              "host": [
+                "{{common_base}}"
+              ],
+              "path": [
+                "documents",
+                "{{document_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "common_base",
+      "value": "http://localhost:5001"
+    },
+    {
+      "key": "appointment_base",
+      "value": "http://localhost:5002"
+    },
+    {
+      "key": "doctor_base",
+      "value": "http://localhost:5003"
+    },
+    {
+      "key": "patient_base",
+      "value": "http://localhost:5004"
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "doctor_token",
+      "value": ""
+    },
+    {
+      "key": "patient_token",
+      "value": ""
+    },
+    {
+      "key": "admin_user_id",
+      "value": ""
+    },
+    {
+      "key": "doctor_user_id",
+      "value": ""
+    },
+    {
+      "key": "patient_user_id",
+      "value": ""
+    },
+    {
+      "key": "doctor_profile_id",
+      "value": ""
+    },
+    {
+      "key": "patient_profile_id",
+      "value": ""
+    },
+    {
+      "key": "appointment_id",
+      "value": ""
+    }
+  ]
+}
