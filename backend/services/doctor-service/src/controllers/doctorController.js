@@ -5,6 +5,13 @@ const Doctor = require('../models/Doctor');
 const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { uploadDoctorDocument } = require('../services/documentService');
+const {
+  attachWeeklyToDoctorLean,
+  attachWeeklyToDoctorsLean,
+  getWeeklyAvailabilityForDoctorId,
+  saveWeekSlots,
+  deleteByDoctorId
+} = require('../services/doctorScheduleService');
 
 /** Doctor may be addressed by internal userId (User._id) or by Doctor document _id (e.g. appointments use _id). */
 const doctorMatchesActor = (actorId, doctorDoc) =>
@@ -68,12 +75,13 @@ const createDoctor = asyncHandler(async (req, res) => {
   const createPayload = { ...value };
 
   const doctor = await Doctor.create(createPayload);
-  return res.status(StatusCodes.CREATED).json(doctor);
+  const lean = await Doctor.findById(doctor._id).lean();
+  return res.status(StatusCodes.CREATED).json(await attachWeeklyToDoctorLean(lean));
 });
 
 const listDoctors = asyncHandler(async (_req, res) => {
   const doctors = await Doctor.find({}).sort({ fullName: 1 }).lean();
-  return res.status(StatusCodes.OK).json(doctors);
+  return res.status(StatusCodes.OK).json(await attachWeeklyToDoctorsLean(doctors));
 });
 
 const getDoctorById = asyncHandler(async (req, res) => {
@@ -82,7 +90,20 @@ const getDoctorById = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
   }
 
-  return res.status(StatusCodes.OK).json(doctor);
+  return res.status(StatusCodes.OK).json(await attachWeeklyToDoctorLean(doctor));
+});
+
+const getDoctorSchedule = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findById(req.params.id).lean();
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  const weeklyAvailability = await getWeeklyAvailabilityForDoctorId(doctor._id);
+  return res.status(StatusCodes.OK).json({
+    doctorId: doctor._id.toString(),
+    weeklyAvailability
+  });
 });
 
 const updateDoctor = asyncHandler(async (req, res) => {
@@ -105,7 +126,7 @@ const updateDoctor = asyncHandler(async (req, res) => {
   await doctor.save();
 
   const updated = await Doctor.findById(doctor._id).lean();
-  return res.status(StatusCodes.OK).json(updated);
+  return res.status(StatusCodes.OK).json(await attachWeeklyToDoctorLean(updated));
 });
 
 const uploadProfilePhoto = asyncHandler(async (req, res) => {
@@ -151,6 +172,7 @@ const deleteDoctor = asyncHandler(async (req, res) => {
   if (!doctor) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
   }
+  await deleteByDoctorId(doctor._id);
   return res.status(StatusCodes.NO_CONTENT).send();
 });
 
@@ -171,40 +193,17 @@ const updateDoctorSchedule = asyncHandler(async (req, res) => {
 
   const { weekStartMonday, schedule: weekSlots } = value;
 
-  if (!doctor.weeklyAvailability?.length && doctor.schedule?.length) {
-    const d = new Date();
-    const day = d.getDay();
-    const offset = day === 0 ? -6 : 1 - day;
-    const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    mon.setDate(mon.getDate() + offset);
-    mon.setHours(0, 0, 0, 0);
-    const y = mon.getFullYear();
-    const m = String(mon.getMonth() + 1).padStart(2, '0');
-    const dd = String(mon.getDate()).padStart(2, '0');
-    const curKey = `${y}-${m}-${dd}`;
-    doctor.weeklyAvailability = [{ weekStartMonday: curKey, slots: [...doctor.schedule] }];
-    doctor.schedule = [];
-  }
+  await saveWeekSlots(doctor._id, weekStartMonday, weekSlots);
 
-  const list = [...(doctor.weeklyAvailability || [])];
-  const idx = list.findIndex((w) => w.weekStartMonday === weekStartMonday);
-  const entry = { weekStartMonday, slots: weekSlots };
-  if (idx >= 0) {
-    list[idx] = entry;
-  } else {
-    list.push(entry);
-  }
-  doctor.weeklyAvailability = list;
-  doctor.markModified('weeklyAvailability');
-  await doctor.save();
-
-  return res.status(StatusCodes.OK).json(doctor);
+  const doctorLean = await Doctor.findById(doctor._id).lean();
+  return res.status(StatusCodes.OK).json(await attachWeeklyToDoctorLean(doctorLean));
 });
 
 module.exports = {
   createDoctor,
   listDoctors,
   getDoctorById,
+  getDoctorSchedule,
   updateDoctor,
   deleteDoctor,
   updateDoctorSchedule,
