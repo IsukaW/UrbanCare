@@ -12,12 +12,17 @@ import { CalendarOutlined, MedicineBoxOutlined, LeftOutlined, RightOutlined } fr
 import { Link } from 'react-router-dom';
 import { doctorService } from '../../services/doctor/doctor.service';
 import useAuthStore from '../../store/authStore';
+import { fetchDoctorProfileForSession } from '../../utils/doctorSession';
 import {
   mondayOfWeekContaining,
   formatWeekStartMonday,
   addDays,
   getSlotsForWeek,
 } from '../../utils/doctorScheduleWeek';
+import {
+  normalizeScheduleArrayForApi,
+  slotsFromProfileForUi,
+} from '../../utils/doctorScheduleSchema';
 
 const { Title, Text } = Typography;
 
@@ -46,7 +51,6 @@ function sameWeekMonday(a, b) {
 
 export default function DoctorSchedule() {
   const user = useAuthStore((s) => s.user);
-  const doctorId = user?._id ?? user?.id;
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,39 +59,52 @@ export default function DoctorSchedule() {
   const [displayWeekStart, setDisplayWeekStart] = useState(() => mondayOfWeekContaining(new Date()));
 
   const loadProfile = useCallback(() => {
-    if (!doctorId) return Promise.resolve();
-    return doctorService
-      .getById(doctorId)
-      .then(setProfile)
+    if (!user) return Promise.resolve();
+    return fetchDoctorProfileForSession(user)
+      .then((p) => {
+        setProfile(p);
+        if (!p) setError('');
+      })
       .catch((e) => {
-        if (!e.message.includes('404') && !e.message.includes('not found')) {
-          setError(e.message);
+        if (!e.message?.includes?.('404') && !e.message?.includes?.('not found')) {
+          setError(e.message || 'Could not load profile');
         }
         setProfile(null);
       });
-  }, [doctorId]);
+  }, [user]);
 
   useEffect(() => {
-    if (!doctorId) {
+    if (!user) {
       setLoading(false);
+      setProfile(null);
       return;
     }
     setLoading(true);
     loadProfile().finally(() => setLoading(false));
-  }, [doctorId, loadProfile]);
+  }, [user, loadProfile]);
 
   const mon = displayWeekStart;
-  const schedule = useMemo(
-    () => (profile ? getSlotsForWeek(profile, mon) : []),
-    [profile, mon]
-  );
+  const schedule = useMemo(() => {
+    if (!profile) return [];
+    const raw = getSlotsForWeek(profile, mon);
+    return slotsFromProfileForUi(raw);
+  }, [profile, mon]);
+
+  const doctorDocId = profile?._id ? String(profile._id) : null;
 
   const persistSchedule = async (nextSchedule) => {
-    if (!doctorId) return;
+    if (!doctorDocId) return;
     const weekStartMonday = formatWeekStartMonday(mon);
+    let apiSchedule;
+    try {
+      apiSchedule = normalizeScheduleArrayForApi(nextSchedule);
+    } catch (err) {
+      setError(err.message || 'Invalid schedule data');
+      throw err;
+    }
     setSaving(true);
     try {
-      const doc = await doctorService.updateSchedule(doctorId, weekStartMonday, nextSchedule);
+      const doc = await doctorService.updateSchedule(doctorDocId, weekStartMonday, apiSchedule);
       setProfile(doc);
     } catch (e) {
       setError(e.message || 'Could not update schedule');
@@ -98,7 +115,7 @@ export default function DoctorSchedule() {
   };
 
   const onSlotClick = (dayOfWeek, startTime, endTime) => {
-    if (!doctorId || saving) return;
+    if (!doctorDocId || saving) return;
     const exists = schedule.some((s) => slotMatches(s, dayOfWeek, startTime, endTime));
 
     if (exists) {
