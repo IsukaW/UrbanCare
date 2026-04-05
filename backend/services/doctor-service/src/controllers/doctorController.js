@@ -1,5 +1,4 @@
 const Joi = require('joi');
-const mongoose = require('mongoose');
 const { StatusCodes } = require('http-status-codes');
 const Doctor = require('../models/Doctor');
 const ApiError = require('../utils/ApiError');
@@ -29,7 +28,8 @@ const updateProfileSchema = Joi.object({
   fullName: Joi.string().min(2).max(120),
   specialization: Joi.string().min(2).max(100),
   qualifications: Joi.array().items(Joi.string().min(2).max(120)),
-  yearsOfExperience: Joi.number().min(0).max(80)
+  yearsOfExperience: Joi.number().min(0).max(80),
+  profilePhotoDocumentId: Joi.string().trim().allow(null, '').optional()
 })
   .min(1)
   .messages({
@@ -57,14 +57,11 @@ const createDoctor = asyncHandler(async (req, res) => {
   }
 
   if (!value.userId?.trim()) {
-    value.userId =
-      req.user.role === 'doctor'
-        ? req.user.id
-        : new mongoose.Types.ObjectId().toString();
+    value.userId = req.user.id;
   }
 
-  if (req.user.role === 'doctor' && req.user.id !== value.userId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only create their own profile');
+  if (req.user.id !== value.userId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You can only create a profile linked to your account');
   }
 
   const existing = await Doctor.findOne({ userId: value.userId });
@@ -117,12 +114,15 @@ const updateDoctor = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
   }
 
-  if (req.user.role === 'doctor' && !doctorMatchesActor(req.user.id, doctor)) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only update their own profile');
+  if (!doctorMatchesActor(req.user.id, doctor)) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You can only update your own profile');
   }
 
-  const { ...rest } = value;
+  const { profilePhotoDocumentId, ...rest } = value;
   Object.assign(doctor, rest);
+  if (profilePhotoDocumentId !== undefined) {
+    doctor.profilePhotoDocumentId = profilePhotoDocumentId === '' ? null : profilePhotoDocumentId;
+  }
   await doctor.save();
 
   const updated = await Doctor.findById(doctor._id).lean();
@@ -139,8 +139,8 @@ const uploadProfilePhoto = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
   }
 
-  if (req.user.role === 'doctor' && !doctorMatchesActor(req.user.id, doctor)) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only upload their own profile photo');
+  if (!doctorMatchesActor(req.user.id, doctor)) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You can only upload a photo for your own profile');
   }
 
   let doc;
@@ -160,11 +160,8 @@ const uploadProfilePhoto = asyncHandler(async (req, res) => {
   doctor.profilePhotoDocumentId = doc._id;
   await doctor.save();
 
-  return res.status(StatusCodes.OK).json({
-    profilePhotoDocumentId: doctor.profilePhotoDocumentId,
-    documentId: doc._id,
-    message: 'Profile photo uploaded successfully'
-  });
+  const updated = await Doctor.findById(doctor._id).lean();
+  return res.status(StatusCodes.OK).json(await attachWeeklyToDoctorLean(updated));
 });
 
 const deleteDoctor = asyncHandler(async (req, res) => {

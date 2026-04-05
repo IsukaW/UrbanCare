@@ -37,6 +37,10 @@ function endFromStart(start) {
   return `${pad2(h + 2)}:${pad2(m)}`;
 }
 
+function slotKey(dayOfWeek, startTime, endTime) {
+  return `${dayOfWeek}_${startTime}_${endTime}`;
+}
+
 function slotMatches(s, dayOfWeek, startTime, endTime) {
   return (
     Number(s.dayOfWeek) === dayOfWeek &&
@@ -90,7 +94,29 @@ export default function DoctorSchedule() {
     return slotsFromProfileForUi(raw);
   }, [profile, mon]);
 
+  const scheduleKeys = useMemo(
+    () => new Set(schedule.map((s) => slotKey(s.dayOfWeek, s.startTime, s.endTime))),
+    [schedule]
+  );
+
   const doctorDocId = profile?._id ? String(profile._id) : null;
+
+  const updateLocalSchedule = useCallback(
+    (nextSchedule) => {
+      setProfile((prev) => {
+        if (!prev) return prev;
+        const weekStartMonday = formatWeekStartMonday(mon);
+        const currentWeekly = Array.isArray(prev.weeklyAvailability) ? prev.weeklyAvailability : [];
+        const idx = currentWeekly.findIndex((w) => w.weekStartMonday === weekStartMonday);
+        const nextWeekly =
+          idx >= 0
+            ? [...currentWeekly.slice(0, idx), { weekStartMonday, slots: nextSchedule }, ...currentWeekly.slice(idx + 1)]
+            : [...currentWeekly, { weekStartMonday, slots: nextSchedule }];
+        return { ...prev, weeklyAvailability: nextWeekly };
+      });
+    },
+    [mon]
+  );
 
   const persistSchedule = async (nextSchedule) => {
     if (!doctorDocId) return;
@@ -102,12 +128,16 @@ export default function DoctorSchedule() {
       setError(err.message || 'Invalid schedule data');
       throw err;
     }
+
+    const previousProfile = profile;
+    updateLocalSchedule(nextSchedule);
     setSaving(true);
     try {
       const doc = await doctorService.updateSchedule(doctorDocId, weekStartMonday, apiSchedule);
       setProfile(doc);
     } catch (e) {
       setError(e.message || 'Could not update schedule');
+      if (previousProfile) setProfile(previousProfile);
       throw e;
     } finally {
       setSaving(false);
@@ -116,7 +146,8 @@ export default function DoctorSchedule() {
 
   const onSlotClick = (dayOfWeek, startTime, endTime) => {
     if (!doctorDocId || saving) return;
-    const exists = schedule.some((s) => slotMatches(s, dayOfWeek, startTime, endTime));
+    const key = slotKey(dayOfWeek, startTime, endTime);
+    const exists = scheduleKeys.has(key);
 
     if (exists) {
       Modal.confirm({
@@ -125,7 +156,7 @@ export default function DoctorSchedule() {
         okText: 'Remove',
         okButtonProps: { danger: true },
         onOk: () => {
-          const next = schedule.filter((s) => !slotMatches(s, dayOfWeek, startTime, endTime));
+          const next = schedule.filter((s) => slotKey(s.dayOfWeek, s.startTime, s.endTime) !== key);
           return persistSchedule(next);
         },
       });
@@ -275,7 +306,8 @@ export default function DoctorSchedule() {
                       {Array.from({ length: 7 }, (_, c) => {
                         const cellDate = addDays(mon, c);
                         const dow = cellDate.getDay();
-                        const on = schedule.some((s) => slotMatches(s, dow, start, end));
+                        const key = slotKey(dow, start, end);
+                        const on = scheduleKeys.has(key);
                         return (
                           <button
                             key={`${weekKey}-${c}-${start}`}
