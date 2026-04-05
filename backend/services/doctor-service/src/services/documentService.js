@@ -1,8 +1,10 @@
 const FormData = require('form-data');
+const axios = require('axios');
 const { env } = require('../config/env');
 
 /**
  * Uploads a file buffer to the common-service document store.
+ * In doctor-service this is only invoked from authenticated doctor routes (own profile photo).
  *
  * @param {object} options
  * @param {Buffer}  options.buffer          - Raw file bytes
@@ -21,27 +23,14 @@ async function uploadDoctorDocument({ buffer, originalname, mimetype, linkedDoct
   form.append('linkedDoctorId', linkedDoctorId);
 
   const url = `${env.COMMON_SERVICE_URL.replace(/\/$/, '')}/documents`;
-  const response = await fetch(url, {
-    method: 'POST',
+  const response = await axios.post(url, form, {
     headers: {
       ...form.getHeaders(),
       Authorization: authorization
-    },
-    body: form
+    }
   });
 
-  const bodyText = await response.text();
-  let data;
-  try {
-    data = bodyText ? JSON.parse(bodyText) : null;
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
-    const msg = data?.message || bodyText || `Common-service responded with ${response.status}`;
-    throw new Error(msg);
-  }
+  const data = response.data;
 
   // common-service returns an array of created document objects — return the first
   const doc = Array.isArray(data) ? data[0] : data;
