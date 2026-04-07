@@ -17,6 +17,8 @@ export function normalizeScheduleSlotForApi(s) {
   const dayOfWeek = Number(s.dayOfWeek);
   const startTime = String(s.startTime ?? '').trim();
   const endTime = String(s.endTime ?? '').trim();
+  const slotId = s.slotId ? String(s.slotId).trim() : undefined;
+  const maxTokens = Number.isInteger(s.maxTokens) ? s.maxTokens : undefined;
 
   if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
     throw new Error('Each slot needs dayOfWeek 0–6 (Sunday–Saturday).');
@@ -25,7 +27,13 @@ export function normalizeScheduleSlotForApi(s) {
     throw new Error('Times must be HH:mm in 24-hour format (e.g. 09:00).');
   }
 
-  return { dayOfWeek, startTime, endTime };
+  return {
+    ...(slotId ? { slotId } : {}),
+    dayOfWeek,
+    startTime,
+    endTime,
+    ...(maxTokens ? { maxTokens } : {})
+  };
 }
 
 /**
@@ -43,9 +51,13 @@ export function normalizeScheduleArrayForApi(slots) {
 export function coerceSlotFromProfile(s) {
   if (!s || typeof s !== 'object') return null;
   return {
+    slotId: s.slotId ? String(s.slotId).trim() : undefined,
     dayOfWeek: Number(s.dayOfWeek),
     startTime: String(s.startTime ?? '').trim(),
     endTime: String(s.endTime ?? '').trim(),
+    maxTokens: Number.isInteger(s.maxTokens) ? s.maxTokens : undefined,
+    reservedTokens: Number.isInteger(s.reservedTokens) ? s.reservedTokens : undefined,
+    availableTokens: Number.isInteger(s.availableTokens) ? s.availableTokens : undefined,
   };
 }
 

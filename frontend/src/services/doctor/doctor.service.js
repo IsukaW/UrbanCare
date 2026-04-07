@@ -31,6 +31,26 @@ export const doctorService = {
     return data.doctor ?? data;
   },
 
+  async getAvailableSlots(id, weekStartMonday) {
+    const { data } = await doctorApi.getAvailableSlots(id, weekStartMonday);
+    return data;
+  },
+
+  async getReservedSlots(id, weekStartMonday) {
+    const { data } = await doctorApi.getReservedSlots(id, weekStartMonday);
+    return data;
+  },
+
+  async reserveSlot(id, slotId) {
+    const { data } = await doctorApi.reserveSlot(id, slotId);
+    return data;
+  },
+
+  async releaseSlot(id, slotId) {
+    const { data } = await doctorApi.releaseSlot(id, slotId);
+    return data;
+  },
+
   async uploadPhoto(id, file) {
     const form = new FormData();
     form.append('photo', file);
