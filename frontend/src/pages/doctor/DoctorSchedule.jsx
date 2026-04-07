@@ -99,6 +99,11 @@ export default function DoctorSchedule() {
     [schedule]
   );
 
+  const scheduleMap = useMemo(
+    () => new Map(schedule.map((s) => [slotKey(s.dayOfWeek, s.startTime, s.endTime), s])),
+    [schedule]
+  );
+
   const doctorDocId = profile?._id ? String(profile._id) : null;
 
   const updateLocalSchedule = useCallback(
@@ -308,13 +313,17 @@ export default function DoctorSchedule() {
                         const dow = cellDate.getDay();
                         const key = slotKey(dow, start, end);
                         const on = scheduleKeys.has(key);
+                        const slot = scheduleMap.get(key);
+                        const tokenInfo = on
+                          ? ` · ${slot?.availableTokens ?? slot?.maxTokens ?? 20}/${slot?.maxTokens ?? 20} tokens available`
+                          : '';
                         return (
                           <button
                             key={`${weekKey}-${c}-${start}`}
                             type="button"
                             disabled={saving}
                             onClick={() => onSlotClick(dow, start, end)}
-                            title={`${cellDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · ${start}–${end}`}
+                            title={`${cellDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · ${start}–${end}${tokenInfo}`}
                             className={[
                               'min-h-9 rounded-md border text-[0] transition-colors',
                               on
@@ -323,7 +332,7 @@ export default function DoctorSchedule() {
                               saving ? 'opacity-60 cursor-wait' : 'cursor-pointer',
                             ].join(' ')}
                             aria-pressed={on}
-                            aria-label={`${cellDate.toDateString()} ${start}–${end}`}
+                            aria-label={`${cellDate.toDateString()} ${start}–${end}${tokenInfo}`}
                           />
                         );
                       })}
