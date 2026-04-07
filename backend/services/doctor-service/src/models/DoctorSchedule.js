@@ -2,9 +2,16 @@ const mongoose = require('mongoose');
 
 const scheduleSlotSchema = new mongoose.Schema(
   {
+    slotId: {
+      type: String,
+      required: true,
+      default: () => new mongoose.Types.ObjectId().toString()
+    },
     dayOfWeek: { type: Number, min: 0, max: 6, required: true },
-    startTime: { type: String, required: true },
-    endTime: { type: String, required: true }
+    startTime: { type: String, required: true, trim: true },
+    endTime: { type: String, required: true, trim: true },
+    maxTokens: { type: Number, default: 20, min: 1 },
+    reservedTokens: { type: Number, default: 0, min: 0 }
   },
   { _id: false }
 );

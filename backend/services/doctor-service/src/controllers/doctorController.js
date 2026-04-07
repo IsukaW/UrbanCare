@@ -9,7 +9,11 @@ const {
   attachWeeklyToDoctorsLean,
   getWeeklyAvailabilityForDoctorId,
   saveWeekSlots,
-  deleteByDoctorId
+  deleteByDoctorId,
+  getAvailableSlotsForDoctorId,
+  getReservedSlotsForDoctorId,
+  reserveSlotToken,
+  releaseSlotToken
 } = require('../services/doctorScheduleService');
 
 /** Doctor may be addressed by internal userId (User._id) or by Doctor document _id (e.g. appointments use _id). */
@@ -36,10 +40,31 @@ const updateProfileSchema = Joi.object({
     'object.min': 'At least one field is required to update'
   });
 
+function parseTimeToMinutes(time) {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
 const slotItemSchema = Joi.object({
+  slotId: Joi.string().trim().optional(),
   dayOfWeek: Joi.number().integer().min(0).max(6).required(),
   startTime: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/).required(),
-  endTime: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/).required()
+  endTime: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/).required(),
+  maxTokens: Joi.number().integer().min(1).optional(),
+  reservedTokens: Joi.number().integer().min(0).optional()
+}).custom((slot, helpers) => {
+  const start = parseTimeToMinutes(slot.startTime);
+  const end = parseTimeToMinutes(slot.endTime);
+  if (end - start < 120) {
+    return helpers.error('slot.duration');
+  }
+  if (end <= start) {
+    return helpers.error('slot.order');
+  }
+  return slot;
+}).messages({
+  'slot.duration': 'Each slot must be at least 2 hours long',
+  'slot.order': 'endTime must be after startTime'
 });
 
 const scheduleSchema = Joi.object({
@@ -101,6 +126,58 @@ const getDoctorSchedule = asyncHandler(async (req, res) => {
     doctorId: doctor._id.toString(),
     weeklyAvailability
   });
+});
+
+const getAvailableSlots = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findById(req.params.id).lean();
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  const weekStartMonday = req.query.weekStartMonday || null;
+  const weeklyAvailability = await getAvailableSlotsForDoctorId(doctor._id, weekStartMonday);
+  return res.status(StatusCodes.OK).json({
+    doctorId: doctor._id.toString(),
+    weekStartMonday,
+    weeklyAvailability
+  });
+});
+
+const getReservedSlots = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findById(req.params.id).lean();
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  const weekStartMonday = req.query.weekStartMonday || null;
+  const weeklyAvailability = await getReservedSlotsForDoctorId(doctor._id, weekStartMonday);
+  return res.status(StatusCodes.OK).json({
+    doctorId: doctor._id.toString(),
+    weekStartMonday,
+    weeklyAvailability
+  });
+});
+
+const reserveSlot = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findById(req.params.id);
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  const slotId = req.params.slotId;
+  const reservation = await reserveSlotToken(doctor._id, slotId);
+  return res.status(StatusCodes.OK).json(reservation);
+});
+
+const releaseSlot = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findById(req.params.id);
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor not found');
+  }
+
+  const slotId = req.params.slotId;
+  const reservation = await releaseSlotToken(doctor._id, slotId);
+  return res.status(StatusCodes.OK).json(reservation);
 });
 
 const updateDoctor = asyncHandler(async (req, res) => {
@@ -201,6 +278,10 @@ module.exports = {
   listDoctors,
   getDoctorById,
   getDoctorSchedule,
+  getAvailableSlots,
+  getReservedSlots,
+  reserveSlot,
+  releaseSlot,
   updateDoctor,
   deleteDoctor,
   updateDoctorSchedule,
