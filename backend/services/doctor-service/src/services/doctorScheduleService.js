@@ -19,7 +19,7 @@ function mondayKeyForDate(d) {
 function normalizeSlot(slot) {
   const normalized = {
     slotId: slot.slotId || new mongoose.Types.ObjectId().toString(),
-    dayOfWeek: slot.dayOfWeek,
+    date: slot.date,
     startTime: slot.startTime,
     endTime: slot.endTime,
     maxTokens: Number.isInteger(slot.maxTokens) ? slot.maxTokens : 20,
@@ -143,9 +143,9 @@ async function loadOrCreateScheduleDocument(doctorObjectId) {
 }
 
 function mergeSlot(existingSlots, incomingSlot) {
-  const key = `${incomingSlot.dayOfWeek}|${incomingSlot.startTime}|${incomingSlot.endTime}`;
+  const key = `${incomingSlot.date}|${incomingSlot.startTime}|${incomingSlot.endTime}`;
   const existingById = new Map(existingSlots.filter((s) => s.slotId).map((s) => [s.slotId, s]));
-  const existingByKey = new Map(existingSlots.map((s) => [`${s.dayOfWeek}|${s.startTime}|${s.endTime}`, s]));
+  const existingByKey = new Map(existingSlots.map((s) => [`${s.date}|${s.startTime}|${s.endTime}`, s]));
   const matched = incomingSlot.slotId ? existingById.get(incomingSlot.slotId) : existingByKey.get(key);
   const normalized = normalizeSlot(incomingSlot);
 

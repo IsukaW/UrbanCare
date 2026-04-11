@@ -7,7 +7,7 @@ const scheduleSlotSchema = new mongoose.Schema(
       required: true,
       default: () => new mongoose.Types.ObjectId().toString()
     },
-    dayOfWeek: { type: Number, min: 0, max: 6, required: true },
+    date: { type: String, required: true, trim: true },
     startTime: { type: String, required: true, trim: true },
     endTime: { type: String, required: true, trim: true },
     maxTokens: { type: Number, default: 20, min: 1 },
@@ -21,7 +21,7 @@ const weekEntrySchema = new mongoose.Schema(
     weekStartMonday: { type: String, required: true, trim: true },
     slots: { type: [scheduleSlotSchema], default: [] }
   },
-  { _id: false }
+  { _id: false, timestamps: false }
 );
 
 const doctorScheduleSchema = new mongoose.Schema(
