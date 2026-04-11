@@ -8,7 +8,10 @@ const schema = Joi.object({
   PORT: Joi.number().port().default(5002),
   DATABASE_URL: Joi.string().required(),
   JWT_SECRET: Joi.string().min(32).required(),
-  COMMON_SERVICE_URL: Joi.string().uri().required()
+  COMMON_SERVICE_URL: Joi.string().uri().required(),
+  DOCTOR_SERVICE_URL: Joi.string().uri().required(),
+  PATIENT_SERVICE_URL: Joi.string().uri().required(),
+  PAYMENT_SERVICE_URL: Joi.string().uri().default('http://localhost:5005')
 })
   .unknown()
   .required();
@@ -24,7 +27,10 @@ const env = {
   PORT: value.PORT,
   DATABASE_URL: value.DATABASE_URL,
   JWT_SECRET: value.JWT_SECRET,
-  COMMON_SERVICE_URL: value.COMMON_SERVICE_URL
+  COMMON_SERVICE_URL: value.COMMON_SERVICE_URL,
+  DOCTOR_SERVICE_URL: value.DOCTOR_SERVICE_URL,
+  PATIENT_SERVICE_URL: value.PATIENT_SERVICE_URL,
+  PAYMENT_SERVICE_URL: value.PAYMENT_SERVICE_URL
 };
 
 module.exports = { env };
