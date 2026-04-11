@@ -4,6 +4,7 @@ const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { createPaymentIntent, retrievePaymentIntent, confirmPaymentIntent } = require('../services/paymentService');
 const { env } = require('../config/env');
+const axios = require('axios');
 
 const createPaymentIntentSchema = Joi.object({
   amount: Joi.number().positive().precision(2).required(),
@@ -102,6 +103,27 @@ const confirmIntent = asyncHandler(async (req, res) => {
     paymentIntentId: paramsValue.paymentIntentId,
     paymentMethod: bodyValue.paymentMethod
   });
+
+  // If intent contains an appointmentId in metadata and payment succeeded, notify appointment-service
+  try {
+    const appointmentId = intent?.metadata?.appointmentId || intent?.metadata?.appointmentId;
+    const status = intent?.status;
+    if (appointmentId && status && ['succeeded', 'paid', 'success'].includes(status.toLowerCase())) {
+      const apptUrl = (env.APPOINTMENT_SERVICE_URL || '').replace(/\/$/, '') + '/appointments/payments/webhook';
+      if (apptUrl) {
+        await axios.post(apptUrl, {
+          appointmentId,
+          paymentId: intent.id,
+          status,
+          transactionId: intent.charges && intent.charges.data && intent.charges.data[0] && intent.charges.data[0].id
+        }).catch((err) => {
+          console.error('Failed to forward payment to appointment-service:', err.message);
+        });
+      }
+    }
+  } catch (forwardErr) {
+    console.error('Error while forwarding payment confirmation:', forwardErr.message);
+  }
 
   return res.status(StatusCodes.OK).json({
     message: 'Payment intent confirmed',

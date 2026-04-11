@@ -22,7 +22,8 @@ const schema = Joi.object({
   SENDGRID_FROM_EMAIL: Joi.string().email().allow('', null),
   AGORA_APP_ID: Joi.string().allow('', null),
   AGORA_APP_CERTIFICATE: Joi.string().allow('', null),
-  AGORA_TOKEN_EXPIRY_SECONDS: Joi.number().integer().min(60).default(3600)
+  AGORA_TOKEN_EXPIRY_SECONDS: Joi.number().integer().min(60).default(3600),
+  APPOINTMENT_SERVICE_URL: Joi.string().uri().default('http://localhost:5002')
 })
   .unknown()
   .required();
@@ -52,7 +53,8 @@ const env = {
   SENDGRID_FROM_EMAIL: value.SENDGRID_FROM_EMAIL,
   AGORA_APP_ID: value.AGORA_APP_ID,
   AGORA_APP_CERTIFICATE: value.AGORA_APP_CERTIFICATE,
-  AGORA_TOKEN_EXPIRY_SECONDS: value.AGORA_TOKEN_EXPIRY_SECONDS
+  AGORA_TOKEN_EXPIRY_SECONDS: value.AGORA_TOKEN_EXPIRY_SECONDS,
+  APPOINTMENT_SERVICE_URL: value.APPOINTMENT_SERVICE_URL
 };
 
 module.exports = { env };

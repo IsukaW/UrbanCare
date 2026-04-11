@@ -4,7 +4,7 @@ const Document = require('../models/Document');
 const ApiError = require('../utils/ApiError');
 const { asyncHandler } = require('../utils/asyncHandler');
 
-const VALID_CATEGORIES = ['prescription', 'lab_report', 'medical_record', 'certificate', 'imaging', 'other'];
+const VALID_CATEGORIES = ['prescription', 'lab_report', 'medical_record', 'certificate', 'imaging', 'profile_photo', 'other'];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,6 +36,8 @@ const uploadMetaSchema = Joi.object({
   category: Joi.string().valid(...VALID_CATEGORIES).default('other'),
   description: Joi.string().max(500).allow('').optional(),
   appointmentId: Joi.string().optional(),
+  linkedDoctorId: Joi.string().optional(),
+  linkedPatientId: Joi.string().optional(),
   // Comma-separated list of userIds to share with at upload time
   visibleTo: Joi.alternatives()
     .try(
@@ -94,6 +96,8 @@ const uploadDocuments = asyncHandler(async (req, res) => {
       category: value.category,
       description: value.description || '',
       appointmentId: value.appointmentId || null,
+      linkedDoctorId: value.linkedDoctorId || null,
+      linkedPatientId: value.linkedPatientId || null,
       visibleTo,
     }))
   );
@@ -131,6 +135,16 @@ const listDocuments = asyncHandler(async (req, res) => {
   // Optional appointment filter
   if (req.query.appointmentId) {
     filter.appointmentId = req.query.appointmentId;
+  }
+
+  // Optional doctor filter
+  if (req.query.linkedDoctorId) {
+    filter.linkedDoctorId = req.query.linkedDoctorId;
+  }
+
+  // Optional patient filter
+  if (req.query.linkedPatientId) {
+    filter.linkedPatientId = req.query.linkedPatientId;
   }
 
   const [docs, total] = await Promise.all([

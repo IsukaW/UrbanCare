@@ -5,5 +5,21 @@ export const doctorApi = {
   create: (data) => doctorClient.post('/doctors/', data),
   list: () => doctorClient.get('/doctors/'),
   getById: (id) => doctorClient.get(`/doctors/${id}`),
-  updateSchedule: (id, schedule) => doctorClient.patch(`/doctors/${id}/schedule`, { schedule }),
+  update: (id, data) => doctorClient.patch(`/doctors/${id}`, data),
+  remove: (id) => doctorClient.delete(`/doctors/${id}`),
+  updateSchedule: (id, payload) => doctorClient.patch(`/doctors/${id}/schedule`, payload),
+  getAvailableSlots: (id, weekStartMonday) =>
+    doctorClient.get(`/doctors/${id}/slots/available`, {
+      params: weekStartMonday ? { weekStartMonday } : undefined,
+    }),
+  getReservedSlots: (id, weekStartMonday) =>
+    doctorClient.get(`/doctors/${id}/slots/reserved`, {
+      params: weekStartMonday ? { weekStartMonday } : undefined,
+    }),
+  reserveSlot: (id, slotId) => doctorClient.post(`/doctors/${id}/slots/${slotId}/reserve`),
+  releaseSlot: (id, slotId) => doctorClient.post(`/doctors/${id}/slots/${slotId}/release`),
+  uploadPhoto: (id, formData) =>
+    doctorClient.post(`/doctors/${id}/photo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };
