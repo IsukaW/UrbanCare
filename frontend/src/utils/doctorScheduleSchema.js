@@ -1,27 +1,27 @@
-/**
- * Mirrors doctor-service Joi `slotItemSchema` + request body `schedule` array.
- * Times must be HH:mm (24h), dayOfWeek 0–6 (same as Date#getDay: 0 = Sunday).
- */
-
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export function isValidScheduleTime(value) {
   return typeof value === 'string' && TIME_PATTERN.test(value.trim());
 }
 
+export function isValidScheduleDate(value) {
+  return typeof value === 'string' && DATE_PATTERN.test(value.trim());
+}
+
 /**
- * @param {{ dayOfWeek: unknown, startTime: unknown, endTime: unknown }} s
- * @returns {{ dayOfWeek: number, startTime: string, endTime: string }}
+ * @param {{ date: unknown, startTime: unknown, endTime: unknown }} s
+ * @returns {{ date: string, startTime: string, endTime: string }}
  */
 export function normalizeScheduleSlotForApi(s) {
-  const dayOfWeek = Number(s.dayOfWeek);
+  const date = String(s.date ?? '').trim();
   const startTime = String(s.startTime ?? '').trim();
   const endTime = String(s.endTime ?? '').trim();
   const slotId = s.slotId ? String(s.slotId).trim() : undefined;
   const maxTokens = Number.isInteger(s.maxTokens) ? s.maxTokens : undefined;
 
-  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
-    throw new Error('Each slot needs dayOfWeek 0–6 (Sunday–Saturday).');
+  if (!isValidScheduleDate(date)) {
+    throw new Error('Each slot needs a valid date in YYYY-MM-DD format.');
   }
   if (!isValidScheduleTime(startTime) || !isValidScheduleTime(endTime)) {
     throw new Error('Times must be HH:mm in 24-hour format (e.g. 09:00).');
@@ -29,7 +29,7 @@ export function normalizeScheduleSlotForApi(s) {
 
   return {
     ...(slotId ? { slotId } : {}),
-    dayOfWeek,
+    date,
     startTime,
     endTime,
     ...(maxTokens ? { maxTokens } : {})
@@ -37,8 +37,8 @@ export function normalizeScheduleSlotForApi(s) {
 }
 
 /**
- * @param {Array<{ dayOfWeek?: unknown, startTime?: unknown, endTime?: unknown }>} slots
- * @returns {Array<{ dayOfWeek: number, startTime: string, endTime: string }>}
+ * @param {Array<{ date?: unknown, startTime?: unknown, endTime?: unknown }>} slots
+ * @returns {Array<{ date: string, startTime: string, endTime: string }>}
  */
 export function normalizeScheduleArrayForApi(slots) {
   if (!Array.isArray(slots)) return [];
@@ -52,7 +52,7 @@ export function coerceSlotFromProfile(s) {
   if (!s || typeof s !== 'object') return null;
   return {
     slotId: s.slotId ? String(s.slotId).trim() : undefined,
-    dayOfWeek: Number(s.dayOfWeek),
+    date: String(s.date ?? '').trim(),
     startTime: String(s.startTime ?? '').trim(),
     endTime: String(s.endTime ?? '').trim(),
     maxTokens: Number.isInteger(s.maxTokens) ? s.maxTokens : undefined,
@@ -69,9 +69,7 @@ export function slotsFromProfileForUi(slots) {
     .filter(
       (s) =>
         s &&
-        Number.isInteger(s.dayOfWeek) &&
-        s.dayOfWeek >= 0 &&
-        s.dayOfWeek <= 6 &&
+        isValidScheduleDate(s.date) &&
         isValidScheduleTime(s.startTime) &&
         isValidScheduleTime(s.endTime)
     );
