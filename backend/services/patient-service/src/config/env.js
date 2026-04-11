@@ -9,6 +9,8 @@ const schema = Joi.object({
   DATABASE_URL: Joi.string().required(),
   JWT_SECRET: Joi.string().min(32).required(),
   COMMON_SERVICE_URL: Joi.string().uri().required(),
+  DOCTOR_SERVICE_URL: Joi.string().uri().required(),
+  APPOINTMENT_SERVICE_URL: Joi.string().uri().required(),
   GOOGLE_API_KEY: Joi.string().required()
 })
   .unknown()
@@ -26,6 +28,8 @@ const env = {
   DATABASE_URL: value.DATABASE_URL,
   JWT_SECRET: value.JWT_SECRET,
   COMMON_SERVICE_URL: value.COMMON_SERVICE_URL,
+  DOCTOR_SERVICE_URL: value.DOCTOR_SERVICE_URL,
+  APPOINTMENT_SERVICE_URL: value.APPOINTMENT_SERVICE_URL,
   GOOGLE_API_KEY: value.GOOGLE_API_KEY
 };
 
