@@ -51,7 +51,7 @@ jobs:
             docker rm ${{ env.SERVICE_NAME }} || true
             docker run -d --name ${{ env.SERVICE_NAME }} \
               --restart always \
-              --network urbancare_default \
+              --network urbancare \
               -p 80:80 \
               ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
@@ -70,7 +70,7 @@ jobs:
               docker rm ${{ env.SERVICE_NAME }} || true
               docker run -d --name ${{ env.SERVICE_NAME }} \
                 --restart always \
-                --network urbancare_default \
+                --network urbancare \
                 -p 80:80 \
                 "$PREVIOUS"
             fi
