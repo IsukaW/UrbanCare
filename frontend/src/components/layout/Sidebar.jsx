@@ -9,7 +9,6 @@ import {
   TeamOutlined,
   ClockCircleOutlined,
   HeartOutlined,
-  PlusCircleOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
 import { ROLES } from '../../constants/roles';
@@ -70,19 +69,24 @@ const NAV_ITEMS = {
       label: 'Dashboard',
     },
     {
-      key: '/patient/profile',
-      icon: <HeartOutlined />,
-      label: 'My Profile',
-    },
-    {
-      key: '/patient/appointments/book',
-      icon: <PlusCircleOutlined />,
-      label: 'Book Appointment',
+      key: '/patient/doctors',
+      icon: <MedicineBoxOutlined />,
+      label: 'Our Doctors',
     },
     {
       key: '/patient/appointments',
       icon: <CalendarOutlined />,
       label: 'My Appointments',
+    },
+    {
+      key: '/patient/medical-records',
+      icon: <FileTextOutlined />,
+      label: 'Medical Records',
+    },
+    {
+      key: '/patient/profile',
+      icon: <HeartOutlined />,
+      label: 'My Profile',
     },
   ],
 };

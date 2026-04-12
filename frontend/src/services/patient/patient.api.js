@@ -5,4 +5,5 @@ export const patientApi = {
   create: (data) => patientClient.post('/patients/', data),
   getById: (id) => patientClient.get(`/patients/${id}`),
   addHistory: (id, record) => patientClient.patch(`/patients/${id}/history`, record),
+  analyseSymptoms: (symptoms) => patientClient.post('/symptoms/analyse', { symptoms }),
 };

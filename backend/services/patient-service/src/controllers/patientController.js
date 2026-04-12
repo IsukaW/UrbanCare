@@ -38,7 +38,9 @@ const createPatient = asyncHandler(async (req, res) => {
 });
 
 const getPatientById = asyncHandler(async (req, res) => {
-  const patient = await Patient.findById(req.params.id);
+  // The route param is the auth user's ID (userId), not the patient document's _id.
+  // findOne by userId so the frontend can call GET /patients/:authUserId.
+  const patient = await Patient.findOne({ userId: req.params.id });
   if (!patient) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Patient not found');
   }

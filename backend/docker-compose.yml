@@ -1,6 +1,20 @@
 version: "3.9"
 
 services:
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - common-service
+      - appointment-service
+      - doctor-service
+      - patient-service
+    restart: unless-stopped
+
   common-service:
     build: ./services/common-service
     container_name: common-service
@@ -8,6 +22,10 @@ services:
       - "5001:5001"
     env_file:
       - ./services/common-service/.env
+    environment:
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:5002
+      - DOCTOR_SERVICE_URL=http://doctor-service:5003
+      - PATIENT_SERVICE_URL=http://patient-service:5004
     depends_on:
       - mongodb-common
 
@@ -18,6 +36,10 @@ services:
       - "5002:5002"
     env_file:
       - ./services/appointment-service/.env
+    environment:
+      - COMMON_SERVICE_URL=http://common-service:5001
+      - DOCTOR_SERVICE_URL=http://doctor-service:5003
+      - PATIENT_SERVICE_URL=http://patient-service:5004
     depends_on:
       - mongodb-appointment
       - common-service
@@ -39,6 +61,10 @@ services:
       - "5004:5004"
     env_file:
       - ./services/patient-service/.env
+    environment:
+      - COMMON_SERVICE_URL=http://common-service:5001
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:5002
+      - DOCTOR_SERVICE_URL=http://doctor-service:5003
     depends_on:
       - mongodb-patient
 

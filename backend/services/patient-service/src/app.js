@@ -7,6 +7,8 @@ const logger = require('./config/logger');
 const patientRoutes = require('./routes/patientRoutes');
 const medicalReportRoutes = require('./routes/medicalReportRoutes');
 const symptomCheckerRoutes = require('./routes/symptomCheckerRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
 const { logSecurityHeaders } = require('./middleware/logSecurityHeaders');
 const { notFound } = require('./middleware/notFound');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -49,6 +51,8 @@ app.get('/health', (_req, res) => {
 app.use('/patients', patientRoutes);
 app.use('/patients/:patientId/documents', medicalReportRoutes);
 app.use('/symptoms', symptomCheckerRoutes);
+app.use('/doctors', doctorRoutes);
+app.use('/appointments', appointmentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

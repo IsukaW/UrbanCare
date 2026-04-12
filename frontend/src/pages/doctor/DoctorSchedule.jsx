@@ -154,6 +154,10 @@ export default function DoctorSchedule() {
     const key = slotKey(dayOfWeek, startTime, endTime);
     const exists = scheduleKeys.has(key);
 
+    // Derive the calendar date: mon is Monday (col 0); JS getDay() 0=Sun sits at col 6
+    const colOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const slotDate = formatWeekStartMonday(addDays(mon, colOffset));
+
     if (exists) {
       Modal.confirm({
         title: 'Remove availability?',
@@ -166,7 +170,7 @@ export default function DoctorSchedule() {
         },
       });
     } else {
-      const next = [...schedule, { dayOfWeek, startTime, endTime }];
+      const next = [...schedule, { dayOfWeek, startTime, endTime, date: slotDate }];
       persistSchedule(next);
     }
   };
@@ -198,14 +202,6 @@ export default function DoctorSchedule() {
           </Title>
           <Text type="secondary">Availability is saved per week — new weeks start empty until you fill them</Text>
         </div>
-        <Space wrap>
-          <Link to="/doctor/dashboard">
-            <Button>Dashboard</Button>
-          </Link>
-          <Link to="/doctor/profile">
-            <Button>Profile</Button>
-          </Link>
-        </Space>
       </div>
 
       {error && (
@@ -327,7 +323,7 @@ export default function DoctorSchedule() {
                             className={[
                               'min-h-9 rounded-md border text-[0] transition-colors',
                               on
-                                ? 'bg-green-800 border-green-950 hover:bg-green-900'
+                                ? 'bg-blue-500 border-blue-700 hover:bg-blue-600'
                                 : 'bg-slate-50 border-slate-200 hover:bg-slate-100',
                               saving ? 'opacity-60 cursor-wait' : 'cursor-pointer',
                             ].join(' ')}
