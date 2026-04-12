@@ -12,6 +12,11 @@ export const patientService = {
     return data.patient ?? data;
   },
 
+  async update(id, payload) {
+    const { data } = await patientApi.update(id, payload);
+    return data.patient ?? data;
+  },
+
   async addHistory(id, record) {
     const { data } = await patientApi.addHistory(id, record);
     return data.patient ?? data;

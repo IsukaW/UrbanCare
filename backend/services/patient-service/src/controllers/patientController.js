@@ -12,6 +12,13 @@ const createSchema = Joi.object({
   allergies: Joi.array().items(Joi.string().max(120)).optional()
 });
 
+const updateSchema = Joi.object({
+  fullName: Joi.string().min(2).max(120).optional(),
+  dateOfBirth: Joi.date().iso().optional(),
+  bloodType: Joi.string().max(4).allow('', null).optional(),
+  allergies: Joi.array().items(Joi.string().max(120)).optional()
+}).min(1);
+
 const historySchema = Joi.object({
   diagnosis: Joi.string().min(2).max(200).required(),
   treatment: Joi.string().max(400).allow('').optional(),
@@ -52,6 +59,27 @@ const getPatientById = asyncHandler(async (req, res) => {
   return res.status(StatusCodes.OK).json(patient);
 });
 
+const updatePatient = asyncHandler(async (req, res) => {
+  const { error, value } = updateSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, error.details.map((d) => d.message).join(', '));
+  }
+
+  const patient = await Patient.findOne({ userId: req.params.id });
+  if (!patient) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Patient not found');
+  }
+
+  if (req.user.role === 'patient' && req.user.id !== patient.userId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Patients can only update their own profile');
+  }
+
+  Object.assign(patient, value);
+  await patient.save();
+
+  return res.status(StatusCodes.OK).json(patient);
+});
+
 const updatePatientHistory = asyncHandler(async (req, res) => {
   const { error, value } = historySchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -76,5 +104,6 @@ const updatePatientHistory = asyncHandler(async (req, res) => {
 module.exports = {
   createPatient,
   getPatientById,
+  updatePatient,
   updatePatientHistory
 };

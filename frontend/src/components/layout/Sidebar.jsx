@@ -39,6 +39,11 @@ const NAV_ITEMS = {
       icon: <CalendarOutlined />,
       label: 'Appointments',
     },
+    {
+      key: '/admin/profile',
+      icon: <UserOutlined />,
+      label: 'My Profile',
+    },
   ],
   [ROLES.DOCTOR]: [
     {
