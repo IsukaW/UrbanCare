@@ -52,7 +52,7 @@ jobs:
             docker run -d --name ${{ env.SERVICE_NAME }} \
               --restart always \
               --network urbancare \
-              -p 8080:8080 \
+              -p 80:80 \
               ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Rollback on failure
@@ -71,6 +71,6 @@ jobs:
               docker run -d --name ${{ env.SERVICE_NAME }} \
                 --restart always \
                 --network urbancare \
-                -p 8080:8080 \
+                -p 80:80 \
                 "$PREVIOUS"
             fi
