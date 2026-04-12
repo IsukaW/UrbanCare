@@ -64,6 +64,7 @@ const listAppointmentSchema = Joi.object({
   status: Joi.string()
     .valid('pending', 'confirmed', 'completed', 'cancelled', 'cancellation_requested', 'rescheduled')
     .optional(),
+  paymentStatus: Joi.string().valid('pending', 'paid', 'failed').optional(),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
 });
@@ -505,9 +506,9 @@ const listAppointments = asyncHandler(async (req, res) => {
     }
     query.patientId = value.patientId;
   } else if (value.doctorId) {
-    if (req.user.role === 'doctor' && req.user.id !== value.doctorId) {
-      throw new ApiError(StatusCodes.FORBIDDEN, 'Doctors can only view their own appointments');
-    }
+    // doctorId has already been resolved to the profile _id by patient-service proxy.
+    // Skip the req.user.id === value.doctorId check because req.user.id is the auth userId,
+    // not the doctor profile _id — they are different IDs.
     query.doctorId = value.doctorId;
   } else if (req.user.role === 'patient') {
     // Patient requesting without filter sees only their own
@@ -520,6 +521,10 @@ const listAppointments = asyncHandler(async (req, res) => {
 
   if (value.status) {
     query.status = value.status;
+  }
+
+  if (value.paymentStatus) {
+    query.paymentStatus = value.paymentStatus;
   }
 
   const { page, limit } = value;

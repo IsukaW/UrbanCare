@@ -52,6 +52,26 @@ async function getDoctorById({ doctorId, authorization }) {
 }
 
 /**
+ * Resolve a doctor's profile _id from their auth userId.
+ * Needed because appointments store the doctor profile _id, not the auth userId.
+ */
+async function getDoctorProfileByUserId({ userId, authorization }) {
+  try {
+    const { data } = await client.get(`/doctors/user/${userId}`, {
+      headers: { Authorization: authorization }
+    });
+    return data; // { _id, userId, fullName, ... }
+  } catch (error) {
+    logger.error({ err: error }, `Failed to resolve doctor profile for userId ${userId}`);
+    const status = error.response?.status;
+    const msg = error.response?.data?.message || error.message;
+    const err = new Error(msg);
+    err.statusCode = status;
+    throw err;
+  }
+}
+
+/**
  * Get available slots for a doctor for a given week
  * @param {object} options
  * @param {string} options.doctorId
@@ -72,4 +92,4 @@ async function getAvailableSlots({ doctorId, weekStartMonday, authorization }) {
   }
 }
 
-module.exports = { getDoctors, getDoctorById, getAvailableSlots };
+module.exports = { getDoctors, getDoctorById, getDoctorProfileByUserId, getAvailableSlots };

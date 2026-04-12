@@ -111,6 +111,14 @@ const getDoctorById = asyncHandler(async (req, res) => {
   return res.status(StatusCodes.OK).json(await attachWeeklyToDoctorLean(doctor));
 });
 
+const getDoctorByUserId = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findOne({ userId: req.params.userId }).lean();
+  if (!doctor) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor profile not found for this user');
+  }
+  return res.status(StatusCodes.OK).json(doctor);
+});
+
 const getDoctorSchedule = asyncHandler(async (req, res) => {
   const doctor = await Doctor.findById(req.params.id).lean();
   if (!doctor) {
@@ -273,6 +281,7 @@ module.exports = {
   createDoctor,
   listDoctors,
   getDoctorById,
+  getDoctorByUserId,
   getDoctorSchedule,
   getAvailableSlots,
   getReservedSlots,
