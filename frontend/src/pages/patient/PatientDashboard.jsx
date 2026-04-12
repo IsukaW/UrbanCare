@@ -5,6 +5,7 @@ import {
   HeartOutlined,
   UserOutlined,
   PlusCircleOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { patientService } from '../../services/patient/patient.service';
@@ -41,11 +42,11 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     patientService
-      .getById(user._id)
+      .getById(user.id)
       .then(setProfile)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user._id]);
+  }, [user.id]);
 
   if (loading) {
     return (
@@ -134,6 +135,15 @@ export default function PatientDashboard() {
             title="Medical History"
             desc="View health records"
             color="#52c41a"
+          />
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <QuickCard
+            to="/patient/medical-records"
+            icon={<FileTextOutlined />}
+            title="Medical Records"
+            desc="Upload & manage documents"
+            color="#722ed1"
           />
         </Col>
       </Row>

@@ -84,6 +84,11 @@ const NAV_ITEMS = {
       icon: <CalendarOutlined />,
       label: 'My Appointments',
     },
+    {
+      key: '/patient/medical-records',
+      icon: <FileTextOutlined />,
+      label: 'Medical Records',
+    },
   ],
 };
 
