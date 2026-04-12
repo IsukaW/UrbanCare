@@ -198,7 +198,7 @@ async function sendAppointmentConfirmationNotification({
           '/notify/email',
           {
             to: email,
-            subject: `✅ Appointment Confirmed — Token ${tokenNumber} | UrbanCare`,
+            subject: `Appointment Confirmed — Token ${tokenNumber} | UrbanCare`,
             text: textBody,
             html: htmlBody
           },
