@@ -50,9 +50,19 @@ export function normalizeScheduleArrayForApi(slots) {
  */
 export function coerceSlotFromProfile(s) {
   if (!s || typeof s !== 'object') return null;
+  const date = String(s.date ?? '').trim();
+
+  // Derive dayOfWeek (JS 0=Sun…6=Sat) from the date field so the grid can
+  // match saved slots against column headers (which use cellDate.getDay()).
+  let dayOfWeek = s.dayOfWeek !== undefined ? Number(s.dayOfWeek) : undefined;
+  if ((dayOfWeek === undefined || Number.isNaN(dayOfWeek)) && DATE_PATTERN.test(date)) {
+    dayOfWeek = new Date(date + 'T00:00:00').getDay();
+  }
+
   return {
     slotId: s.slotId ? String(s.slotId).trim() : undefined,
-    date: String(s.date ?? '').trim(),
+    date,
+    dayOfWeek,
     startTime: String(s.startTime ?? '').trim(),
     endTime: String(s.endTime ?? '').trim(),
     maxTokens: Number.isInteger(s.maxTokens) ? s.maxTokens : undefined,

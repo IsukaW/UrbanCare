@@ -62,7 +62,7 @@ export default function PatientAppointments() {
           <Text type="secondary">Find and manage your appointments</Text>
         </div>
         <Link to="/patient/appointments/book">
-          <Button type="primary">Book New</Button>
+          <Button type="primary">Book Appointment</Button>
         </Link>
       </div>
 

@@ -59,7 +59,10 @@ const getDoctorAvailableSlots = asyncHandler(async (req, res) => {
     authorization: req.headers.authorization
   });
 
-  const slotsForDate = weeklyAvailability.filter((slot) => slot.date === dateStr);
+  // weeklyAvailability is an array of week entries: [{ weekStartMonday, slots: [...] }]
+  // Flatten to individual slots then filter by the selected date
+  const allSlots = weeklyAvailability.flatMap((entry) => entry.slots || []);
+  const slotsForDate = allSlots.filter((slot) => slot.date === dateStr);
 
   return res.status(StatusCodes.OK).json({
     doctorId,

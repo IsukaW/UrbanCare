@@ -7,7 +7,7 @@ const scheduleSlotSchema = new mongoose.Schema(
       required: true,
       default: () => new mongoose.Types.ObjectId().toString()
     },
-    date: { type: String, required: true, trim: true },
+    date: { type: String, required: false, trim: true },
     startTime: { type: String, required: true, trim: true },
     endTime: { type: String, required: true, trim: true },
     maxTokens: { type: Number, default: 20, min: 1 },
