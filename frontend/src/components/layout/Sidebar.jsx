@@ -89,6 +89,11 @@ const NAV_ITEMS = {
       icon: <FileTextOutlined />,
       label: 'Medical Records',
     },
+    {
+      key: '/patient/doctors',
+      icon: <MedicineBoxOutlined />,
+      label: 'Our Doctors',
+    },
   ],
 };
 
