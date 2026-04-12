@@ -55,15 +55,11 @@ const slotItemSchema = Joi.object({
 }).custom((slot, helpers) => {
   const start = parseTimeToMinutes(slot.startTime);
   const end = parseTimeToMinutes(slot.endTime);
-  if (end - start < 120) {
-    return helpers.error('slot.duration');
-  }
   if (end <= start) {
     return helpers.error('slot.order');
   }
   return slot;
 }).messages({
-  'slot.duration': 'Each slot must be at least 2 hours long',
   'slot.order': 'endTime must be after startTime'
 });
 
