@@ -23,15 +23,19 @@ async function bookAppointment({ body, authorization }) {
   }
 }
 
-async function getPatientAppointments({ patientId, status, authorization }) {
+async function getPatientAppointments({ patientId, status, page, limit, authorization }) {
   try {
     const params = { patientId };
     if (status) params.status = status;
+    if (page)  params.page = page;
+    if (limit) params.limit = limit;
     const { data } = await client.get('/appointments', {
       headers: { Authorization: authorization },
       params
     });
-    return Array.isArray(data) ? data : data?.appointments || [];
+    // Support both paginated { appointments, pagination } and legacy plain array
+    if (data && data.appointments !== undefined) return data;
+    return { appointments: Array.isArray(data) ? data : [], pagination: null };
   } catch (error) {
     logger.error({ err: error }, `Failed to fetch appointments for patient ${patientId}`);
     const status2 = error.response?.status;
@@ -76,9 +80,47 @@ async function requestCancellation({ appointmentId, reason, authorization }) {
   }
 }
 
+async function confirmPaymentForAppointment({ appointmentId, paymentIntentId, authorization }) {
+  try {
+    const { data } = await client.post(
+      `/appointments/${appointmentId}/confirm-payment`,
+      { paymentIntentId },
+      { headers: { Authorization: authorization } }
+    );
+    return data;
+  } catch (error) {
+    logger.error({ err: error }, `Failed to confirm payment for appointment ${appointmentId}`);
+    const status = error.response?.status;
+    const msg = error.response?.data?.message || error.message;
+    const err = new Error(msg);
+    err.statusCode = status;
+    throw err;
+  }
+}
+
+async function updateAppointment({ appointmentId, body, authorization }) {
+  try {
+    const { data } = await client.put(
+      `/appointments/${appointmentId}`,
+      body,
+      { headers: { Authorization: authorization } }
+    );
+    return data;
+  } catch (error) {
+    logger.error({ err: error }, `Failed to update appointment ${appointmentId}`);
+    const status = error.response?.status;
+    const msg = error.response?.data?.message || error.message;
+    const err = new Error(msg);
+    err.statusCode = status;
+    throw err;
+  }
+}
+
 module.exports = {
   bookAppointment,
   getPatientAppointments,
   getAppointmentById,
-  requestCancellation
+  requestCancellation,
+  confirmPaymentForAppointment,
+  updateAppointment
 };

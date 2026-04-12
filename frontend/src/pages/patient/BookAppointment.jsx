@@ -12,7 +12,8 @@ import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
 import useAuthStore from '../../store/authStore';
 import { notify } from '../../utils/notify';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import PaymentModal from './PaymentModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -21,6 +22,7 @@ const { TextArea } = Input;
 export default function BookAppointment() {
   const user = useAuthStore((s) => s.user);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [doctors, setDoctors]               = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
@@ -31,6 +33,7 @@ export default function BookAppointment() {
   const [selectedSlot, setSelectedSlot]     = useState(null);
   const [saving, setSaving]                 = useState(false);
   const [form]                              = Form.useForm();
+  const [pendingAppointment, setPendingAppointment] = useState(null);
 
   // ── Load all doctors on mount ─────────────────────────────────────────────
   useEffect(() => {
@@ -86,7 +89,7 @@ export default function BookAppointment() {
 
     setSaving(true);
     try {
-      await appointmentService.book({
+      const appointment = await appointmentService.book({
         patientId: user.id,
         doctorId: selectedDoctor,
         slotId: selectedSlot.slotId,
@@ -96,12 +99,8 @@ export default function BookAppointment() {
         patientPhoneNumber: user.phoneNumber,
       });
 
-      notify.success('Appointment Booked!', 'Your appointment has been submitted successfully.');
-      form.resetFields();
-      setSelectedDoctor(null);
-      setSelectedDate(null);
-      setSlots([]);
-      setSelectedSlot(null);
+      // Show payment modal before confirming
+      setPendingAppointment(appointment);
     } catch (e) {
       notify.error('Booking failed', e.message);
     } finally {
@@ -109,9 +108,43 @@ export default function BookAppointment() {
     }
   };
 
+  const resetForm = () => {
+    form.resetFields();
+    setSelectedDoctor(null);
+    setSelectedDate(null);
+    setSlots([]);
+    setSelectedSlot(null);
+  };
+
+  const handlePaymentSuccess = (confirmedAppointment) => {
+    setPendingAppointment(null);
+    resetForm();
+    notify.success(
+      'Appointment Confirmed!',
+      `Token #${confirmedAppointment?.tokenNumber || ''} — Payment received.`
+    );
+    navigate('/patient/appointments');
+  };
+
+  const handlePaymentCancel = () => {
+    setPendingAppointment(null);
+    // Appointment was created (pending) but not paid — user can try again or it stays pending
+    notify.warning(
+      'Payment Cancelled',
+      'Your appointment is pending payment. You can complete it later.'
+    );
+    resetForm();
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 h-full">
+      <PaymentModal
+        open={!!pendingAppointment}
+        appointment={pendingAppointment}
+        onSuccess={handlePaymentSuccess}
+        onCancel={handlePaymentCancel}
+      />
       <div className="mb-6">
         <Title level={3} style={{ margin: 0 }}>Book Appointment</Title>
         <Text type="secondary">Schedule a visit with a doctor</Text>
@@ -151,7 +184,7 @@ export default function BookAppointment() {
                         <div className="flex items-center gap-2">
                           <UserOutlined className="text-blue-400" />
                           <span>
-                            Dr. {d.fullName}
+                            {d.fullName}
                             <span className="text-gray-400 text-xs ml-2">— {d.specialization}</span>
                           </span>
                         </div>

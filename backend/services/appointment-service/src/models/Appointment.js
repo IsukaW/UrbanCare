@@ -47,6 +47,10 @@ const appointmentSchema = new mongoose.Schema(
     // Reference to patient's existing medical documents (for context during appointment)
     patientMedicalDocumentIds: [{ type: String }],
 
+    // Contact info stored at booking time — used for post-payment notifications
+    patientEmail: { type: String },
+    patientPhoneNumber: { type: String },
+
     cancellationReason: { type: String },
     paymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
     

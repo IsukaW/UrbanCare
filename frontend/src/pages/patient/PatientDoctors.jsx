@@ -149,7 +149,7 @@ export default function PatientDoctors() {
                 <div className="flex flex-col items-center text-center mb-4">
                   <DoctorAvatar documentId={doctor.profilePhotoDocumentId} size={72} />
                   <div className="font-bold text-gray-800 text-base">
-                    Dr. {doctor.fullName}
+                    {doctor.fullName}
                   </div>
                   <Tag color="blue" className="mt-1">
                     {doctor.specialization}
