@@ -23,20 +23,20 @@ export default function PatientProfile() {
 
   useEffect(() => {
     patientService
-      .getById(user._id)
+      .getById(user.id)
       .then((p) => {
         setProfile(p);
         setMode('view');
       })
       .catch(() => setMode('create'))
       .finally(() => setLoading(false));
-  }, [user._id]);
+  }, [user.id]);
 
   const handleCreate = async (values) => {
     setSaving(true);
     try {
       const newProfile = await patientService.create({
-        userId: user._id,
+        userId: user.id,
         fullName: values.fullName,
         dateOfBirth: values.dateOfBirth,
         bloodType: values.bloodType,
@@ -156,6 +156,7 @@ export default function PatientProfile() {
               </div>
             )}
           </Card>
+
         </>
       )}
     </div>

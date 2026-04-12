@@ -1,9 +1,11 @@
-import { appointmentClient } from '../../utils/httpClients';
+import { patientClient } from '../../utils/httpClients';
 
-// Talks to the appointment service endpoints
 export const appointmentApi = {
-  create: (data) => appointmentClient.post('/appointments/', data),
-  getById: (id) => appointmentClient.get(`/appointments/${id}`),
-  update: (id, data) => appointmentClient.patch(`/appointments/${id}`, data),
-  cancel: (id) => appointmentClient.delete(`/appointments/${id}`),
+  book: (data) => patientClient.post('/appointments/book', data),
+  list: (params) => patientClient.get('/appointments', { params }),
+  getById: (id) => patientClient.get(`/appointments/${id}`),
+  cancel: (id, reason) => patientClient.post(`/appointments/${id}/cancel`, { reason }),
+  listDoctors: (params) => patientClient.get('/doctors', { params }),
+  getDoctorSlots: (doctorId, date) =>
+    patientClient.get(`/doctors/${doctorId}/available-slots`, { params: { date } }),
 };

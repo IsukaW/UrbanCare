@@ -5,6 +5,9 @@ import {
   HeartOutlined,
   UserOutlined,
   PlusCircleOutlined,
+  FileTextOutlined,
+  MedicineBoxOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { patientService } from '../../services/patient/patient.service';
@@ -41,11 +44,11 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     patientService
-      .getById(user._id)
+      .getById(user.id)
       .then(setProfile)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user._id]);
+  }, [user.id]);
 
   if (loading) {
     return (
@@ -134,6 +137,33 @@ export default function PatientDashboard() {
             title="Medical History"
             desc="View health records"
             color="#52c41a"
+          />
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <QuickCard
+            to="/patient/medical-records"
+            icon={<FileTextOutlined />}
+            title="Medical Records"
+            desc="Upload & manage documents"
+            color="#722ed1"
+          />
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <QuickCard
+            to="/patient/doctors"
+            icon={<MedicineBoxOutlined />}
+            title="Our Doctors"
+            desc="Browse available specialists"
+            color="#1677ff"
+          />
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <QuickCard
+            to="/patient/symptom-checker"
+            icon={<ExperimentOutlined />}
+            title="AI Symptom Checker"
+            desc="Get AI-powered health insights"
+            color="#eb2f96"
           />
         </Col>
       </Row>
