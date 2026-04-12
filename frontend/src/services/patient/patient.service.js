@@ -16,4 +16,9 @@ export const patientService = {
     const { data } = await patientApi.addHistory(id, record);
     return data.patient ?? data;
   },
+
+  async analyseSymptoms(symptoms) {
+    const { data } = await patientApi.analyseSymptoms(symptoms);
+    return data;
+  },
 };

@@ -7,6 +7,7 @@ import {
   PlusCircleOutlined,
   FileTextOutlined,
   MedicineBoxOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { patientService } from '../../services/patient/patient.service';
@@ -148,14 +149,23 @@ export default function PatientDashboard() {
           />
         </Col>
         <Col xs={24} sm={12} md={8}>
-        <QuickCard
-          to="/patient/doctors"
-          icon={<MedicineBoxOutlined />}
-          title="Our Doctors"
-          desc="Browse available specialists"
-          color="#1677ff"
-        />
-      </Col>
+          <QuickCard
+            to="/patient/doctors"
+            icon={<MedicineBoxOutlined />}
+            title="Our Doctors"
+            desc="Browse available specialists"
+            color="#1677ff"
+          />
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <QuickCard
+            to="/patient/symptom-checker"
+            icon={<ExperimentOutlined />}
+            title="AI Symptom Checker"
+            desc="Get AI-powered health insights"
+            color="#eb2f96"
+          />
+        </Col>
       </Row>
     </div>
   );
