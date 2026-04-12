@@ -10,6 +10,7 @@ const {
   confirmPaymentForAppointment,
   updateAppointment
 } = require('../services/appointmentClient');
+const { getDoctorProfileByUserId } = require('../services/doctorClient');
 
 const bookSchema = Joi.object({
   patientId: Joi.string().required(),
@@ -56,20 +57,39 @@ const createAppointment = asyncHandler(async (req, res) => {
 
 const listMyAppointments = asyncHandler(async (req, res) => {
   const { status, page, limit } = req.query;
+
   let patientId;
+  let doctorId;
+
   if (req.user.role === 'patient') {
     patientId = req.user.id;
+  } else if (req.user.role === 'doctor') {
+    // req.user.id is the auth userId; appointments store the doctor profile _id.
+    // Resolve the doctor profile _id via doctor-service.
+    try {
+      const profile = await getDoctorProfileByUserId({
+        userId: req.user.id,
+        authorization: req.headers.authorization
+      });
+      doctorId = profile._id.toString();
+    } catch (err) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Doctor profile not found for your account');
+    }
   } else {
+    // Admin — can filter by either
     patientId = req.query.patientId;
+    doctorId  = req.query.doctorId;
   }
 
-  if (!patientId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'patientId query parameter is required');
+  if (req.user.role !== 'admin' && !patientId && !doctorId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'patientId or doctorId is required');
   }
 
   try {
     const result = await getPatientAppointments({
       patientId,
+      doctorId,
+      paymentStatus: req.query.paymentStatus,
       status,
       page,
       limit,

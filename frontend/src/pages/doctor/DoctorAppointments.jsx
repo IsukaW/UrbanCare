@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Typography, Button, Tag, Select, Spin, Empty, Modal, Form, Input, Badge, Pagination,
+  Card, Typography, Button, Tag, Select, Spin, Empty, Pagination,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
-  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined, EditOutlined,
+  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined,
 } from '@ant-design/icons';
 import { notify } from '../../utils/notify';
 import dayjs from 'dayjs';
@@ -17,21 +17,15 @@ import VideoCall from '../../components/VideoCall';
 
 const { Title, Text } = Typography;
 
-const STATUS_OPTIONS = [
-  APPOINTMENT_STATUS.CONFIRMED,
-  APPOINTMENT_STATUS.COMPLETED,
-  APPOINTMENT_STATUS.CANCELLED,
-].map((s) => ({ value: s, label: APPOINTMENT_STATUS_LABELS[s] }));
+// Doctors only see paid (confirmed) appointments
+const DOCTOR_PAYMENT_FILTER = 'paid';
 
 export default function DoctorAppointments() {
   const user = useAuthStore((s) => s.user);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
-  const [editAppt, setEditAppt]         = useState(null);
-  const [saving, setSaving]             = useState(false);
   const [videoAppt, setVideoAppt]       = useState(null);
-  const [form]                          = Form.useForm();
   const [page, setPage]                 = useState(1);
   const [total, setTotal]               = useState(0);
   const PAGE_SIZE = 10;
@@ -41,8 +35,12 @@ export default function DoctorAppointments() {
     try {
       const { appointments: list, pagination } = await appointmentService.list(
         Object.fromEntries(
-          Object.entries({ doctorId: user.id, ...(status ? { status } : {}), page: currentPage, limit: PAGE_SIZE })
-            .filter(([, v]) => v)
+          Object.entries({
+            paymentStatus: DOCTOR_PAYMENT_FILTER,
+            ...(status ? { status } : {}),
+            page: currentPage,
+            limit: PAGE_SIZE,
+          }).filter(([, v]) => v)
         )
       );
       setAppointments(list);
@@ -55,27 +53,6 @@ export default function DoctorAppointments() {
   };
 
   useEffect(() => { load(); }, []);
-
-  const openEdit = (appt) => {
-    form.setFieldsValue({ status: appt.status });
-    setEditAppt(appt);
-  };
-
-  const handleUpdate = async (values) => {
-    setSaving(true);
-    try {
-      const updated = await appointmentService.update(editAppt._id, values);
-      notify.success('Status updated');
-      setAppointments((prev) =>
-        prev.map((a) => a._id === editAppt._id ? { ...a, ...updated } : a)
-      );
-      setEditAppt(null);
-    } catch (e) {
-      notify.error('Update failed', e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleFilterChange = (val) => {
     setStatusFilter(val);
@@ -166,9 +143,12 @@ export default function DoctorAppointments() {
 
                 {/* Right: status + actions */}
                 <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-3 sm:shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-gray-100">
-                  <Tag color={APPOINTMENT_STATUS_COLORS[appt.status]}>
-                    {APPOINTMENT_STATUS_LABELS[appt.status] ?? appt.status}
-                  </Tag>
+                  <div className="flex gap-2 flex-wrap">
+                    <Tag color={APPOINTMENT_STATUS_COLORS[appt.status]}>
+                      {APPOINTMENT_STATUS_LABELS[appt.status] ?? appt.status}
+                    </Tag>
+                    <Tag color="green">Paid</Tag>
+                  </div>
                   <div className="flex gap-2 flex-wrap">
                     {appt.status === APPOINTMENT_STATUS.CONFIRMED && appt.type === 'video' && (
                       <Button
@@ -180,13 +160,6 @@ export default function DoctorAppointments() {
                         Join Call
                       </Button>
                     )}
-                    <Button
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => openEdit(appt)}
-                    >
-                      Update Status
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -209,25 +182,6 @@ export default function DoctorAppointments() {
           />
         </div>
       )}
-
-      {/* Edit modal */}
-      <Modal
-        title="Update Appointment Status"
-        open={!!editAppt}
-        onCancel={() => setEditAppt(null)}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" onFinish={handleUpdate} className="mt-4">
-          <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-            <Select options={STATUS_OPTIONS} />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setEditAppt(null)}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={saving}>Save</Button>
-          </div>
-        </Form>
-      </Modal>
 
       {/* Video call overlay */}
       {videoAppt && (

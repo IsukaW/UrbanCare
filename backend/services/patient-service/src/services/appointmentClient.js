@@ -23,12 +23,15 @@ async function bookAppointment({ body, authorization }) {
   }
 }
 
-async function getPatientAppointments({ patientId, status, page, limit, authorization }) {
+async function getPatientAppointments({ patientId, doctorId, paymentStatus, status, page, limit, authorization }) {
   try {
-    const params = { patientId };
+    const params = {};
+    if (patientId)     params.patientId     = patientId;
+    if (doctorId)      params.doctorId      = doctorId;
+    if (paymentStatus) params.paymentStatus = paymentStatus;
     if (status) params.status = status;
-    if (page)  params.page = page;
-    if (limit) params.limit = limit;
+    if (page)   params.page  = page;
+    if (limit)  params.limit = limit;
     const { data } = await client.get('/appointments', {
       headers: { Authorization: authorization },
       params
@@ -37,7 +40,7 @@ async function getPatientAppointments({ patientId, status, page, limit, authoriz
     if (data && data.appointments !== undefined) return data;
     return { appointments: Array.isArray(data) ? data : [], pagination: null };
   } catch (error) {
-    logger.error({ err: error }, `Failed to fetch appointments for patient ${patientId}`);
+    logger.error({ err: error }, 'Failed to fetch appointments');
     const status2 = error.response?.status;
     const msg = error.response?.data?.message || error.message;
     const err = new Error(msg);
