@@ -1,13 +1,28 @@
 export const APPOINTMENT_STATUS = Object.freeze({
-  SCHEDULED: 'scheduled',
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
+  CANCELLATION_REQUESTED: 'cancellation_requested',
+  RESCHEDULED: 'rescheduled',
 });
 
 export const APPOINTMENT_STATUS_COLORS = {
-  scheduled: 'blue',
+  pending: 'orange',
+  confirmed: 'blue',
   completed: 'green',
   cancelled: 'red',
+  cancellation_requested: 'volcano',
+  rescheduled: 'purple',
+};
+
+export const APPOINTMENT_STATUS_LABELS = {
+  pending: 'Pending Payment',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  cancellation_requested: 'Cancellation Requested',
+  rescheduled: 'Rescheduled',
 };
 
 export const DAYS_OF_WEEK = [

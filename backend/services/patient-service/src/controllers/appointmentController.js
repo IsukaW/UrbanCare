@@ -6,7 +6,9 @@ const {
   bookAppointment,
   getPatientAppointments,
   getAppointmentById,
-  requestCancellation
+  requestCancellation,
+  confirmPaymentForAppointment,
+  updateAppointment
 } = require('../services/appointmentClient');
 
 const bookSchema = Joi.object({
@@ -53,7 +55,7 @@ const createAppointment = asyncHandler(async (req, res) => {
 });
 
 const listMyAppointments = asyncHandler(async (req, res) => {
-  const { status } = req.query;
+  const { status, page, limit } = req.query;
   let patientId;
   if (req.user.role === 'patient') {
     patientId = req.user.id;
@@ -66,12 +68,14 @@ const listMyAppointments = asyncHandler(async (req, res) => {
   }
 
   try {
-    const appointments = await getPatientAppointments({
+    const result = await getPatientAppointments({
       patientId,
       status,
+      page,
+      limit,
       authorization: req.headers.authorization
     });
-    return res.status(StatusCodes.OK).json(appointments);
+    return res.status(StatusCodes.OK).json(result);
   } catch (err) {
     const code = err.statusCode || StatusCodes.BAD_GATEWAY;
     throw new ApiError(code, err.message);
@@ -121,4 +125,40 @@ const cancelAppointment = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { createAppointment, listMyAppointments, getAppointment, cancelAppointment };
+const updateAppt = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await updateAppointment({
+      appointmentId: id,
+      body: req.body,
+      authorization: req.headers.authorization
+    });
+    return res.status(StatusCodes.OK).json(result);
+  } catch (err) {
+    const code = err.statusCode || StatusCodes.BAD_GATEWAY;
+    throw new ApiError(code, err.message);
+  }
+});
+
+const confirmPayment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { paymentIntentId } = req.body || {};
+
+  if (!paymentIntentId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'paymentIntentId is required');
+  }
+
+  try {
+    const result = await confirmPaymentForAppointment({
+      appointmentId: id,
+      paymentIntentId,
+      authorization: req.headers.authorization
+    });
+    return res.status(StatusCodes.OK).json(result);
+  } catch (err) {
+    const code = err.statusCode || StatusCodes.BAD_GATEWAY;
+    throw new ApiError(code, err.message);
+  }
+});
+
+module.exports = { createAppointment, listMyAppointments, getAppointment, cancelAppointment, confirmPayment, updateAppt };

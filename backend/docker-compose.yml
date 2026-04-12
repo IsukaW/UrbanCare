@@ -40,6 +40,7 @@ services:
       - COMMON_SERVICE_URL=http://common-service:5001
       - DOCTOR_SERVICE_URL=http://doctor-service:5003
       - PATIENT_SERVICE_URL=http://patient-service:5004
+      - PAYMENT_SERVICE_URL=http://common-service:5001
     depends_on:
       - mongodb-appointment
       - common-service
