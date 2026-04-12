@@ -1,10 +1,14 @@
 import { appointmentApi } from './appointment.api';
 
-// Book, view, update, and cancel appointments
 export const appointmentService = {
-  async create(payload) {
-    const { data } = await appointmentApi.create(payload);
+  async book(payload) {
+    const { data } = await appointmentApi.book(payload);
     return data.appointment ?? data;
+  },
+
+  async list(params) {
+    const { data } = await appointmentApi.list(params);
+    return Array.isArray(data) ? data : data.appointments ?? [];
   },
 
   async getById(id) {
@@ -12,12 +16,20 @@ export const appointmentService = {
     return data.appointment ?? data;
   },
 
-  async update(id, payload) {
-    const { data } = await appointmentApi.update(id, payload);
-    return data.appointment ?? data;
+  async cancel(id, reason) {
+    const { data } = await appointmentApi.cancel(id, reason);
+    return data;
   },
 
-  async cancel(id) {
-    await appointmentApi.cancel(id);
+  async listDoctors(specialty) {
+    const { data } = await appointmentApi.listDoctors(
+      specialty ? { specialty } : undefined
+    );
+    return Array.isArray(data) ? data : [];
+  },
+
+  async getDoctorSlots(doctorId, date) {
+    const { data } = await appointmentApi.getDoctorSlots(doctorId, date);
+    return data;
   },
 };
