@@ -34,7 +34,7 @@ async function processPayment({
   try {
     // Common service exposes Stripe payment intent endpoints under /intent
     const { data } = await client.post(
-      '/intent',
+      '/payments/intent',
       {
         amount,
         description: `Payment for appointment ${appointmentId}`,
@@ -129,9 +129,34 @@ async function updatePaymentStatus({ paymentId, status, transactionId, authoriza
   }
 }
 
+/**
+ * Retrieve a payment intent by its ID
+ * @param {object} options
+ * @param {string} options.paymentIntentId - Stripe PaymentIntent ID
+ * @param {string} options.authorization - Bearer token
+ * @returns {Promise<object>} - Payment intent object { paymentIntentId, status, amount, ... }
+ */
+async function retrievePaymentIntent({ paymentIntentId, authorization }) {
+  try {
+    const { data } = await client.get(`/payments/intent/${paymentIntentId}`, {
+      headers: { Authorization: authorization }
+    });
+    // common-service returns { message, data: { paymentIntentId, status, ... } }
+    return data.data ?? data;
+  } catch (error) {
+    logger.error({ err: error }, `Failed to retrieve payment intent ${paymentIntentId}`);
+    const status = error.response?.status;
+    const msg = error.response?.data?.message || error.message;
+    const err = new Error(msg);
+    err.statusCode = status;
+    throw err;
+  }
+}
+
 module.exports = {
   processPayment,
   getPaymentStatus,
   refundPayment,
-  updatePaymentStatus
+  updatePaymentStatus,
+  retrievePaymentIntent
 };

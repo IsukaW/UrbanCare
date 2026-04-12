@@ -8,7 +8,11 @@ export const appointmentService = {
 
   async list(params) {
     const { data } = await appointmentApi.list(params);
-    return Array.isArray(data) ? data : data.appointments ?? [];
+    // Support paginated { appointments, pagination } and legacy plain array
+    if (data && data.appointments !== undefined) {
+      return { appointments: data.appointments, pagination: data.pagination };
+    }
+    return { appointments: Array.isArray(data) ? data : [], pagination: null };
   },
 
   async getById(id) {
@@ -31,5 +35,25 @@ export const appointmentService = {
   async getDoctorSlots(doctorId, date) {
     const { data } = await appointmentApi.getDoctorSlots(doctorId, date);
     return data;
+  },
+
+  async createPaymentIntent(appointmentId, amount = 500) {
+    const { data } = await appointmentApi.createPaymentIntent(appointmentId, amount);
+    return data.data; // unwrap: { message, data: { paymentIntentId, clientSecret, ... } }
+  },
+
+  async confirmPaymentIntent(paymentIntentId, paymentMethod = 'pm_card_visa') {
+    const { data } = await appointmentApi.confirmPaymentIntent(paymentIntentId, paymentMethod);
+    return data.data ?? data;
+  },
+
+  async confirmPayment(appointmentId, paymentIntentId) {
+    const { data } = await appointmentApi.confirmPayment(appointmentId, paymentIntentId);
+    return data.appointment ?? data;
+  },
+
+  async update(id, payload) {
+    const { data } = await appointmentApi.update(id, payload);
+    return data.appointment ?? data;
   },
 };

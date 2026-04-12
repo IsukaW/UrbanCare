@@ -10,7 +10,8 @@ const {
   approveCancellation,
   offerReschedule,
   confirmReschedule,
-  handlePaymentWebhook
+  handlePaymentWebhook,
+  confirmPayment
 } = require('../controllers/appointmentController');
 const { authenticate } = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
@@ -46,6 +47,9 @@ router.post('/:id/offer-reschedule', authenticate, authorize('admin'), offerResc
 
 // Patient confirm reschedule
 router.put('/:id/confirm-reschedule', authenticate, authorize('admin', 'patient'), confirmReschedule);
+
+// Confirm payment after client-side Stripe payment intent succeeds
+router.post('/:id/confirm-payment', authenticate, authorize('admin', 'patient'), confirmPayment);
 
 // Payment webhook (called by common/payment service) - no auth expected from internal service
 router.post('/payments/webhook', handlePaymentWebhook);

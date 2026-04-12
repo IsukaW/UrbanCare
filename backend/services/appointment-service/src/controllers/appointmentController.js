@@ -12,7 +12,7 @@ const {
 } = require('../services/commonServiceClient');
 const { getDoctors, getDoctorById, getDoctorSchedule, getAvailableSlots, reserveSlot, releaseSlot, getDoctorPrescriptions } = require('../services/doctorClient');
 const { getPatientById, getPatientMedicalDocuments } = require('../services/patientClient');
-const { processPayment, getPaymentStatus } = require('../services/paymentClient');
+const { processPayment, getPaymentStatus, retrievePaymentIntent } = require('../services/paymentClient');
 
 //validation schemas
 
@@ -63,7 +63,9 @@ const listAppointmentSchema = Joi.object({
   doctorId: Joi.string().optional(),
   status: Joi.string()
     .valid('pending', 'confirmed', 'completed', 'cancelled', 'cancellation_requested', 'rescheduled')
-    .optional()
+    .optional(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(10),
 });
 
 //helper functions
@@ -353,6 +355,8 @@ const bookAppointment = asyncHandler(async (req, res) => {
       reason: value.reason,
       status: 'pending',
       paymentStatus: 'pending',
+      patientEmail: value.patientEmail || null,
+      patientPhoneNumber: value.patientPhoneNumber || null,
       createdBy: req.user.id,
       updatedBy: req.user.id,
       doctorPrescriptionIds: [], // Will be populated in step 8
@@ -455,22 +459,8 @@ const bookAppointment = asyncHandler(async (req, res) => {
     // Save appointment with references
     await appointment.save();
 
-    // 10. Send appointment confirmation notification (non-critical)
-    try {
-      await sendAppointmentConfirmationNotification({
-        email: value.patientEmail,
-        phoneNumber: value.patientPhoneNumber,
-        appointmentId: appointment._id.toString(),
-        scheduledAt: appointment.scheduledAt.toISOString(),
-        doctorName: doctorDetails.fullName,
-        doctorSpecialty: doctorDetails.specialization,
-        tokenNumber,
-        type: appointment.type,
-        authorization
-      });
-    } catch (error) {
-      console.error('Failed to send notification:', error);
-    }
+    // 10. Confirmation notification is intentionally deferred — sent only after payment is confirmed
+    //     See confirmPayment handler.
 
     // 11. Return appointment with details
     const response = {
@@ -532,11 +522,23 @@ const listAppointments = asyncHandler(async (req, res) => {
     query.status = value.status;
   }
 
-  const appointments = await Appointment.find(query)
-    .sort({ scheduledAt: -1 })
-    .lean();
+  const { page, limit } = value;
+  const skip = (page - 1) * limit;
 
-  return res.status(StatusCodes.OK).json(appointments);
+  const [appointments, total] = await Promise.all([
+    Appointment.find(query).sort({ scheduledAt: -1 }).skip(skip).limit(limit).lean(),
+    Appointment.countDocuments(query),
+  ]);
+
+  return res.status(StatusCodes.OK).json({
+    appointments,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 });
 
 
@@ -1103,6 +1105,50 @@ const confirmReschedule = asyncHandler(async (req, res) => {
   });
 });
 
+// Confirm payment - called by patient after Stripe payment intent is confirmed client-side
+const confirmPayment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { paymentIntentId } = req.body || {};
+
+  if (!paymentIntentId) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ message: 'paymentIntentId is required' });
+  }
+
+  const appointment = await Appointment.findById(id);
+  if (!appointment) {
+    return res.status(StatusCodes.NOT_FOUND).json({ message: 'Appointment not found' });
+  }
+
+  // The frontend already confirmed the PaymentIntent with Stripe successfully before calling here.
+  // We trust the paymentIntentId as proof of payment and mark the appointment confirmed.
+  appointment.paymentStatus = 'paid';
+  appointment.status = 'confirmed';
+  appointment.updatedBy = req.user?.id || 'system';
+  await appointment.save();
+
+  // Send the confirmation notification now that payment is verified
+  try {
+    await sendAppointmentConfirmationNotification({
+      email: appointment.patientEmail,
+      phoneNumber: appointment.patientPhoneNumber,
+      appointmentId: appointment._id.toString(),
+      scheduledAt: appointment.scheduledAt.toISOString(),
+      doctorName: appointment.doctorName,
+      doctorSpecialty: appointment.doctorSpecialty,
+      tokenNumber: appointment.tokenNumber,
+      type: appointment.type,
+      authorization: req.headers.authorization
+    });
+  } catch (notifyErr) {
+    console.error('Failed to send confirmation notification:', notifyErr.message);
+  }
+
+  return res.status(StatusCodes.OK).json({
+    message: 'Appointment confirmed',
+    appointment: appointment.toObject()
+  });
+});
+
 // Payment webhook receiver - called by common/payment service when payment completes
 const handlePaymentWebhook = asyncHandler(async (req, res) => {
   const { appointmentId, paymentId, status, transactionId } = req.body || {};
@@ -1167,5 +1213,6 @@ module.exports = {
   approveCancellation,
   offerReschedule,
   confirmReschedule,
-  handlePaymentWebhook
+  handlePaymentWebhook,
+  confirmPayment
 };
