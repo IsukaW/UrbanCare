@@ -13,6 +13,8 @@ const canRead = (doc, user) => {
   if (user.role === 'admin') return true;
   if (doc.uploadedBy.userId === user.id) return true;
   if (doc.visibleTo.includes(user.id)) return true;
+  // Profile photos are public to all authenticated users
+  if (doc.category === 'profile_photo') return true;
   return false;
 };
 

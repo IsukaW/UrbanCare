@@ -202,6 +202,7 @@ export default function AdminDoctors() {
           rowKey="_id"
           pagination={{ pageSize: 10 }}
           size="middle"
+          scroll={{ x: 700 }}
         />
       </Card>
 
