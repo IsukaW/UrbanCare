@@ -15,6 +15,7 @@ import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminUsers from '../pages/admin/AdminUsers';
 import AdminDoctors from '../pages/admin/AdminDoctors';
 import AdminAppointments from '../pages/admin/AdminAppointments';
+import AdminProfile from '../pages/admin/AdminProfile';
 
 // Doctor pages
 import DoctorDashboard from '../pages/doctor/DoctorDashboard';
@@ -92,6 +93,14 @@ export default function AppRouter() {
             element={
               <RoleRoute roles={[ROLES.ADMIN]}>
                 <AdminAppointments />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/admin/profile"
+            element={
+              <RoleRoute roles={[ROLES.ADMIN]}>
+                <AdminProfile />
               </RoleRoute>
             }
           />

@@ -3,6 +3,7 @@ const {
   createDoctor,
   listDoctors,
   getDoctorById,
+  getDoctorByUserId,
   getDoctorSchedule,
   getAvailableSlots,
   getReservedSlots,
@@ -21,6 +22,8 @@ const router = express.Router();
 
 router.post('/', authenticate, authorize('doctor'), createDoctor);
 router.get('/', authenticate, authorize('admin', 'doctor', 'patient'), listDoctors);
+// Resolve doctor profile by auth userId (must be before /:id routes)
+router.get('/user/:userId', authenticate, authorize('admin', 'doctor', 'patient'), getDoctorByUserId);
 router.get('/:id/schedule', authenticate, authorize('admin', 'doctor', 'patient'), getDoctorSchedule);
 router.get('/:id/slots/available', authenticate, authorize('admin', 'doctor', 'patient'), getAvailableSlots);
 router.get('/:id/slots/reserved', authenticate, authorize('admin', 'doctor', 'patient'), getReservedSlots);
