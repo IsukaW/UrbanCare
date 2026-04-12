@@ -7,8 +7,9 @@ import {
   Button,
   Modal,
   Space,
+  Tag,
 } from 'antd';
-import { CalendarOutlined, MedicineBoxOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { CalendarOutlined, MedicineBoxOutlined, LeftOutlined, RightOutlined, CheckOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { doctorService } from '../../services/doctor/doctor.service';
 import useAuthStore from '../../store/authStore';
@@ -41,26 +42,34 @@ function slotKey(dayOfWeek, startTime, endTime) {
   return `${dayOfWeek}_${startTime}_${endTime}`;
 }
 
-function slotMatches(s, dayOfWeek, startTime, endTime) {
-  return (
-    Number(s.dayOfWeek) === dayOfWeek &&
-    String(s.startTime) === startTime &&
-    String(s.endTime) === endTime
-  );
-}
-
 function sameWeekMonday(a, b) {
   return a.getTime() === b.getTime();
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return isMobile;
+}
+
 export default function DoctorSchedule() {
   const user = useAuthStore((s) => s.user);
+  const isMobile = useIsMobile();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [displayWeekStart, setDisplayWeekStart] = useState(() => mondayOfWeekContaining(new Date()));
+  // Mobile: which day column (0=Mon … 6=Sun) is selected
+  const [selectedDayOffset, setSelectedDayOffset] = useState(() => {
+    const today = new Date().getDay(); // 0=Sun
+    return today === 0 ? 6 : today - 1; // convert to Mon-based offset
+  });
 
   const loadProfile = useCallback(() => {
     if (!user) return Promise.resolve();
@@ -96,11 +105,6 @@ export default function DoctorSchedule() {
 
   const scheduleKeys = useMemo(
     () => new Set(schedule.map((s) => slotKey(s.dayOfWeek, s.startTime, s.endTime))),
-    [schedule]
-  );
-
-  const scheduleMap = useMemo(
-    () => new Map(schedule.map((s) => [slotKey(s.dayOfWeek, s.startTime, s.endTime), s])),
     [schedule]
   );
 
@@ -154,7 +158,6 @@ export default function DoctorSchedule() {
     const key = slotKey(dayOfWeek, startTime, endTime);
     const exists = scheduleKeys.has(key);
 
-    // Derive the calendar date: mon is Monday (col 0); JS getDay() 0=Sun sits at col 6
     const colOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const slotDate = formatWeekStartMonday(addDays(mon, colOffset));
 
@@ -194,14 +197,12 @@ export default function DoctorSchedule() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Title level={3} style={{ margin: 0 }}>
-            My schedule
-          </Title>
-          <Text type="secondary">Availability is saved per week — new weeks start empty until you fill them</Text>
-        </div>
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <div className="mb-5">
+        <Title level={3} style={{ margin: 0 }}>
+          My schedule
+        </Title>
+        <Text type="secondary">Availability is saved per week — new weeks start empty until you fill them</Text>
       </div>
 
       {error && (
@@ -239,105 +240,183 @@ export default function DoctorSchedule() {
             </div>
           </Card>
 
-          <Card
-            className="rounded-2xl shadow-sm border-0"
-            title={
-              <span className="flex flex-wrap items-center gap-2">
-                <CalendarOutlined />
-                Weekly calendar
-              </span>
-            }
-            extra={
-              <Space wrap size="small">
-                <Button icon={<LeftOutlined />} onClick={goPrevWeek} aria-label="Previous week">
-                  Previous
-                </Button>
-                <Button icon={<RightOutlined />} onClick={goNextWeek} aria-label="Next week">
-                  Next
-                </Button>
-                <Button type={viewingCurrentWeek ? 'default' : 'primary'} onClick={goThisWeek}>
-                  This week
-                </Button>
-              </Space>
-            }
-          >
-            <Text type="secondary" className="block mb-3 text-sm">
-              <span className="font-medium text-slate-700">{weekLabel}</span>
-              {!viewingCurrentWeek && (
-                <span className="text-amber-700/90"> · viewing another week</span>
-              )}
-              <span className="block mt-1">
-                Monday–Sunday · 2-hour blocks, 6:00 AM–10:00 PM · each week is separate; past weeks keep what you saved; future weeks are empty until set
-              </span>
-            </Text>
-
-            <div className="overflow-x-auto">
-              <div
-                key={weekKey}
-                className="grid gap-1 min-w-[640px]"
-                style={{
-                  gridTemplateColumns: '52px repeat(7, minmax(0, 1fr))',
-                }}
+          {/* Week navigation — always visible above the calendar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <Text className="font-medium text-slate-700 text-sm">{weekLabel}</Text>
+            <Space size="small" wrap>
+              <Button size="small" icon={<LeftOutlined />} onClick={goPrevWeek} aria-label="Previous week" />
+              <Button size="small" icon={<RightOutlined />} onClick={goNextWeek} aria-label="Next week" />
+              <Button
+                size="small"
+                type={viewingCurrentWeek ? 'default' : 'primary'}
+                onClick={goThisWeek}
               >
-                <div />
+                This week
+              </Button>
+            </Space>
+          </div>
+
+          {isMobile ? (
+            /* ── Mobile: day-picker + vertical slot list ── */
+            <Card className="rounded-2xl shadow-sm border-0">
+              {/* Day selector */}
+              <div className="grid grid-cols-7 gap-1 mb-4">
                 {Array.from({ length: 7 }, (_, c) => {
                   const dayDate = addDays(mon, c);
-                  return (
-                    <div
-                      key={`h-${weekKey}-${c}`}
-                      className="text-center pb-2 border-b border-slate-100"
-                    >
-                      <div className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">
-                        {dayDate.toLocaleDateString(undefined, { weekday: 'short' })}
-                      </div>
-                      <div className="text-sm font-semibold text-slate-800">{dayDate.getDate()}</div>
-                    </div>
+                  const isSelected = selectedDayOffset === c;
+                  const dow = dayDate.getDay();
+                  const hasSlots = SLOT_STARTS.some((start) =>
+                    scheduleKeys.has(slotKey(dow, start, endFromStart(start)))
                   );
-                })}
-
-                {SLOT_STARTS.map((start) => {
-                  const end = endFromStart(start);
                   return (
-                    <React.Fragment key={`${weekKey}-${start}`}>
-                      <div className="text-[10px] text-slate-500 flex items-center justify-end pr-1 text-right leading-tight">
-                        {start}
-                        <br />
-                        {end}
-                      </div>
-                      {Array.from({ length: 7 }, (_, c) => {
-                        const cellDate = addDays(mon, c);
-                        const dow = cellDate.getDay();
-                        const key = slotKey(dow, start, end);
-                        const on = scheduleKeys.has(key);
-                        const slot = scheduleMap.get(key);
-                        const tokenInfo = on
-                          ? ` · ${slot?.availableTokens ?? slot?.maxTokens ?? 20}/${slot?.maxTokens ?? 20} tokens available`
-                          : '';
-                        return (
-                          <button
-                            key={`${weekKey}-${c}-${start}`}
-                            type="button"
-                            disabled={saving}
-                            onClick={() => onSlotClick(dow, start, end)}
-                            title={`${cellDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · ${start}–${end}${tokenInfo}`}
-                            className={[
-                              'min-h-9 rounded-md border text-[0] transition-colors',
-                              on
-                                ? 'bg-blue-500 border-blue-700 hover:bg-blue-600'
-                                : 'bg-slate-50 border-slate-200 hover:bg-slate-100',
-                              saving ? 'opacity-60 cursor-wait' : 'cursor-pointer',
-                            ].join(' ')}
-                            aria-pressed={on}
-                            aria-label={`${cellDate.toDateString()} ${start}–${end}${tokenInfo}`}
-                          />
-                        );
-                      })}
-                    </React.Fragment>
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSelectedDayOffset(c)}
+                      className={[
+                        'flex flex-col items-center py-2 rounded-xl border transition-colors',
+                        isSelected
+                          ? 'bg-blue-500 border-blue-600 text-white'
+                          : 'bg-white border-slate-200 text-slate-700 active:bg-slate-100',
+                      ].join(' ')}
+                    >
+                      <span className="text-[10px] font-semibold uppercase leading-none mb-1">
+                        {dayDate.toLocaleDateString(undefined, { weekday: 'short' })}
+                      </span>
+                      <span className="text-sm font-bold leading-none">{dayDate.getDate()}</span>
+                      {hasSlots && (
+                        <span
+                          className={[
+                            'w-1.5 h-1.5 rounded-full mt-1',
+                            isSelected ? 'bg-white/80' : 'bg-blue-500',
+                          ].join(' ')}
+                        />
+                      )}
+                    </button>
                   );
                 })}
               </div>
-            </div>
-          </Card>
+
+              {/* Time slots for selected day */}
+              <div className="flex flex-col gap-2">
+                {SLOT_STARTS.map((start) => {
+                  const end = endFromStart(start);
+                  const selectedDate = addDays(mon, selectedDayOffset);
+                  const dow = selectedDate.getDay();
+                  const key = slotKey(dow, start, end);
+                  const isOn = scheduleKeys.has(key);
+
+                  return (
+                    <button
+                      key={start}
+                      type="button"
+                      disabled={saving}
+                      onClick={() => onSlotClick(dow, start, end)}
+                      className={[
+                        'flex items-center justify-between rounded-xl border px-4 py-3 transition-colors w-full text-left',
+                        isOn
+                          ? 'bg-blue-500 border-blue-600 text-white'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 active:bg-slate-100',
+                        saving ? 'opacity-60 cursor-wait' : 'cursor-pointer',
+                      ].join(' ')}
+                    >
+                      <span className="font-medium text-sm">
+                        {start} — {end}
+                      </span>
+                      {isOn ? (
+                        <Tag
+                          className="m-0 border-0 bg-white/20 text-white text-xs"
+                          style={{ lineHeight: '20px' }}
+                        >
+                          <CheckOutlined className="mr-1" />
+                          Available
+                        </Tag>
+                      ) : (
+                        <span className="text-xs text-slate-400">Tap to set</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Text type="secondary" className="block mt-4 text-xs">
+                Tap a slot to toggle availability for this week only.
+              </Text>
+            </Card>
+          ) : (
+            /* ── Desktop: full week grid ── */
+            <Card className="rounded-2xl shadow-sm border-0">
+              <Text type="secondary" className="block mb-3 text-sm">
+                {!viewingCurrentWeek && (
+                  <span className="text-amber-700/90">Viewing another week · </span>
+                )}
+                Monday–Sunday · 2-hour blocks, 6:00 AM–10:00 PM · each week is separate
+              </Text>
+
+              <div className="overflow-x-auto">
+                <div
+                  key={weekKey}
+                  className="grid gap-1 min-w-[640px]"
+                  style={{
+                    gridTemplateColumns: '52px repeat(7, minmax(0, 1fr))',
+                  }}
+                >
+                  <div />
+                  {Array.from({ length: 7 }, (_, c) => {
+                    const dayDate = addDays(mon, c);
+                    return (
+                      <div
+                        key={`h-${weekKey}-${c}`}
+                        className="text-center pb-2 border-b border-slate-100"
+                      >
+                        <div className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">
+                          {dayDate.toLocaleDateString(undefined, { weekday: 'short' })}
+                        </div>
+                        <div className="text-sm font-semibold text-slate-800">{dayDate.getDate()}</div>
+                      </div>
+                    );
+                  })}
+
+                  {SLOT_STARTS.map((start) => {
+                    const end = endFromStart(start);
+                    return (
+                      <React.Fragment key={`${weekKey}-${start}`}>
+                        <div className="text-[10px] text-slate-500 flex items-center justify-end pr-1 text-right leading-tight">
+                          {start}
+                          <br />
+                          {end}
+                        </div>
+                        {Array.from({ length: 7 }, (_, c) => {
+                          const cellDate = addDays(mon, c);
+                          const dow = cellDate.getDay();
+                          const key = slotKey(dow, start, end);
+                          const on = scheduleKeys.has(key);
+                          return (
+                            <button
+                              key={`${weekKey}-${c}-${start}`}
+                              type="button"
+                              disabled={saving}
+                              onClick={() => onSlotClick(dow, start, end)}
+                              title={`${cellDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · ${start}–${end}`}
+                              className={[
+                                'min-h-9 rounded-md border text-[0] transition-colors',
+                                on
+                                  ? 'bg-blue-500 border-blue-700 hover:bg-blue-600'
+                                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100',
+                                saving ? 'opacity-60 cursor-wait' : 'cursor-pointer',
+                              ].join(' ')}
+                              aria-pressed={on}
+                              aria-label={`${cellDate.toDateString()} ${start}–${end}`}
+                            />
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+            </Card>
+          )}
         </>
       )}
     </div>

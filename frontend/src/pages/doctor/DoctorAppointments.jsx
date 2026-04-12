@@ -74,7 +74,7 @@ export default function DoctorAppointments() {
       </div>
 
       <Card className="rounded-2xl shadow-sm border-0 mb-6">
-        <Space.Compact block style={{ maxWidth: 480 }}>
+        <Space.Compact block>
           <Input
             placeholder="Enter Appointment ID"
             value={searchId}
