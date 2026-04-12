@@ -51,6 +51,7 @@ jobs:
             docker rm ${{ env.SERVICE_NAME }} || true
             docker run -d --name ${{ env.SERVICE_NAME }} \
               --restart always \
+              --network urbancare \
               --env-file /opt/hospital/.env.common-service \
               -p 5001:5001 \
               ${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -70,6 +71,7 @@ jobs:
               docker rm ${{ env.SERVICE_NAME }} || true
               docker run -d --name ${{ env.SERVICE_NAME }} \
                 --restart always \
+                --network urbancare \
                 --env-file /opt/hospital/.env.common-service \
                 -p 5001:5001 \
                 "$PREVIOUS"
