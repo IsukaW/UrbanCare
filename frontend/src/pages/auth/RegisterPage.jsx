@@ -104,7 +104,7 @@ export default function RegisterPage() {
 
         <Form layout="vertical" onFinish={handleRegister} size="large" requiredMark={false}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 name="firstName"
                 label="First Name"
@@ -116,7 +116,7 @@ export default function RegisterPage() {
                 <Input prefix={<UserOutlined className="text-gray-400" />} placeholder="Shehan" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 name="lastName"
                 label="Last Name"

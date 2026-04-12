@@ -8,41 +8,48 @@ import {
   BookOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import { doctorService } from '../../services/doctor/doctor.service';
 import useAuthStore from '../../store/authStore';
 import { getSlotsForWeek, mondayOfWeekContaining } from '../../utils/doctorScheduleWeek';
+import { fetchDoctorProfileForSession } from '../../utils/doctorSession';
 
 const { Title, Text } = Typography;
 
 export default function DoctorDashboard() {
   const user = useAuthStore((s) => s.user);
-  const doctorId = user?._id ?? user?.id;
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadProfile = useCallback(() => {
-    if (!doctorId) return Promise.resolve();
-    return doctorService
-      .getById(doctorId)
-      .then(setProfile)
+    if (!user) return Promise.resolve();
+    return fetchDoctorProfileForSession(user)
+      .then((p) => {
+        setProfile(p ?? null);
+        // Persist doctor profile _id into the auth session so subsequent calls use it directly
+        if (p?._id) {
+          const { token, user: sessionUser } = useAuthStore.getState();
+          if (token && sessionUser?.role === 'doctor' && sessionUser._id !== String(p._id)) {
+            useAuthStore.getState().setAuth(token, { ...sessionUser, _id: String(p._id) });
+          }
+        }
+      })
       .catch((e) => {
         if (!e.message.includes('404') && !e.message.includes('not found')) {
           setError(e.message);
         }
         setProfile(null);
       });
-  }, [doctorId]);
+  }, [user]);
 
   useEffect(() => {
-    if (!doctorId) {
+    if (!user) {
       setLoading(false);
       return;
     }
     setLoading(true);
     loadProfile().finally(() => setLoading(false));
-  }, [doctorId, loadProfile]);
+  }, [user, loadProfile]);
 
   const stats = useMemo(() => {
     if (!profile) return null;

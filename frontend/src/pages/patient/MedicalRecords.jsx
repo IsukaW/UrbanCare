@@ -213,7 +213,7 @@ export default function MedicalRecords() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <Title level={3} style={{ margin: 0 }}>
             My Medical Records
@@ -263,6 +263,7 @@ export default function MedicalRecords() {
             ),
           }}
           pagination={{ pageSize: 10, showSizeChanger: false }}
+          scroll={{ x: 600 }}
         />
       </Card>
 

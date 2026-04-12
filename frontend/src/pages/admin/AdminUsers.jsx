@@ -187,7 +187,7 @@ export default function AdminUsers() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Title level={3} style={{ margin: 0 }}>
           User Management
         </Title>
@@ -227,6 +227,7 @@ export default function AdminUsers() {
           rowKey="_id"
           pagination={{ pageSize: 10 }}
           size="middle"
+          scroll={{ x: 700 }}
         />
       </Card>
 

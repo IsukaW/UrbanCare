@@ -120,6 +120,7 @@ export default function AdminDashboard() {
           rowKey="_id"
           pagination={{ pageSize: 8, showSizeChanger: false }}
           size="middle"
+          scroll={{ x: 500 }}
         />
       </Card>
     </div>

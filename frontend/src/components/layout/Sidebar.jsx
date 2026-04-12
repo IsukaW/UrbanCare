@@ -98,7 +98,7 @@ const ROLE_COLORS = {
   [ROLES.PATIENT]: '#52c41a',
 };
 
-export default function Sidebar({ collapsed, onCollapse }) {
+export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const location = useLocation();
@@ -160,7 +160,10 @@ export default function Sidebar({ collapsed, onCollapse }) {
         mode="inline"
         selectedKeys={[selectedKey]}
         items={items}
-        onClick={({ key }) => navigate(key)}
+        onClick={({ key }) => {
+          navigate(key);
+          onNavigate?.();
+        }}
         style={{ border: 'none', marginTop: 4 }}
       />
     </Sider>

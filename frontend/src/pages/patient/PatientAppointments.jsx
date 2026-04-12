@@ -54,7 +54,7 @@ export default function PatientAppointments() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <Title level={3} style={{ margin: 0 }}>
             My Appointments
@@ -67,7 +67,7 @@ export default function PatientAppointments() {
       </div>
 
       <Card className="rounded-2xl shadow-sm border-0 mb-6">
-        <Space.Compact block style={{ maxWidth: 480 }}>
+        <Space.Compact block>
           <Input
             placeholder="Enter Appointment ID"
             value={searchId}

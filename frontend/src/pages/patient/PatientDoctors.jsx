@@ -9,10 +9,35 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { appointmentService } from '../../services/appointment/appointment.service';
+import { documentService } from '../../services/common/document.service';
 import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+/** Fetches and displays a doctor profile photo; falls back to icon avatar */
+function DoctorAvatar({ documentId, size = 72 }) {
+  const [src, setSrc] = useState(null);
+
+  useEffect(() => {
+    if (!documentId) return;
+    let url = null;
+    documentService.getViewUrl(documentId)
+      .then((objectUrl) => { url = objectUrl; setSrc(objectUrl); })
+      .catch(() => {});
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [documentId]);
+
+  return (
+    <Avatar
+      size={size}
+      src={src || undefined}
+      icon={!src ? <UserOutlined /> : undefined}
+      className="mb-3"
+      style={{ background: src ? 'transparent' : '#1677ff', flexShrink: 0 }}
+    />
+  );
+}
 
 const SPECIALIZATIONS = [
   'Cardiology', 'Neurology', 'Dermatology', 'Orthopedics',
@@ -86,7 +111,7 @@ export default function PatientDoctors() {
             prefix={<SearchOutlined className="text-gray-400" />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ maxWidth: 300 }}
+            style={{ flex: '1 1 200px', minWidth: 0 }}
             allowClear
           />
           <Select
@@ -94,7 +119,7 @@ export default function PatientDoctors() {
             value={specialty}
             onChange={setSpecialty}
             allowClear
-            style={{ minWidth: 200 }}
+            style={{ flex: '1 1 180px', minWidth: 0 }}
           >
             {SPECIALIZATIONS.map((s) => (
               <Option key={s} value={s}>{s}</Option>
@@ -122,12 +147,7 @@ export default function PatientDoctors() {
               >
                 {/* Avatar + Name */}
                 <div className="flex flex-col items-center text-center mb-4">
-                  <Avatar
-                    size={64}
-                    icon={<UserOutlined />}
-                    className="mb-3"
-                    style={{ background: '#1677ff' }}
-                  />
+                  <DoctorAvatar documentId={doctor.profilePhotoDocumentId} size={72} />
                   <div className="font-bold text-gray-800 text-base">
                     Dr. {doctor.fullName}
                   </div>
