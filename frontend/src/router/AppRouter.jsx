@@ -27,6 +27,7 @@ import PatientDashboard from '../pages/patient/PatientDashboard';
 import PatientProfile from '../pages/patient/PatientProfile';
 import PatientAppointments from '../pages/patient/PatientAppointments';
 import BookAppointment from '../pages/patient/BookAppointment';
+import MedicalRecords from '../pages/patient/MedicalRecords';
 
 // After login, redirect to role-specific home
 function RoleRedirect() {
@@ -157,6 +158,14 @@ export default function AppRouter() {
             element={
               <RoleRoute roles={[ROLES.PATIENT]}>
                 <BookAppointment />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/patient/medical-records"
+            element={
+              <RoleRoute roles={[ROLES.PATIENT]}>
+                <MedicalRecords />
               </RoleRoute>
             }
           />

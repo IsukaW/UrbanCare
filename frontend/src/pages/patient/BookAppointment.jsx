@@ -33,7 +33,7 @@ export default function BookAppointment() {
     setSaving(true);
     try {
       const payload = {
-        patientId: user._id,
+        patientId: user.id,
         doctorId: values.doctorId,
         scheduledAt: values.scheduledAt.toISOString(),
         reason: values.reason,
