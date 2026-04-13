@@ -174,6 +174,27 @@ async function getDoctorPrescriptions({ doctorId, appointmentId, authorization }
   }
 }
 
+/**
+ * Resolve a doctor's profile _id from their auth userId.
+ * Appointments store the doctor profile _id, not the auth userId,
+ * so this is needed for access checks when a doctor calls the API.
+ */
+async function getDoctorProfileByUserId({ userId, authorization }) {
+  try {
+    const { data } = await client.get(`/doctors/user/${userId}`, {
+      headers: { Authorization: authorization }
+    });
+    return data; // { _id, userId, fullName, ... }
+  } catch (error) {
+    logger.error({ err: error }, `Failed to resolve doctor profile for userId ${userId}`);
+    const status = error.response?.status;
+    const msg = error.response?.data?.message || error.message;
+    const err = new Error(msg);
+    err.statusCode = status;
+    throw err;
+  }
+}
+
 module.exports = {
   getDoctors,
   getDoctorById,
@@ -181,5 +202,6 @@ module.exports = {
   getAvailableSlots,
   reserveSlot,
   releaseSlot,
-  getDoctorPrescriptions
+  getDoctorPrescriptions,
+  getDoctorProfileByUserId,
 };

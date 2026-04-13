@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Card, Typography, Button, Tag, Select, Spin, Empty,
   Modal, List, Tooltip, Input, Progress,
@@ -8,7 +8,9 @@ import {
   VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined,
   FileTextOutlined, DownloadOutlined, EyeOutlined, PaperClipOutlined,
   ArrowLeftOutlined, TeamOutlined, SearchOutlined,
+  DownOutlined, UpOutlined,
 } from '@ant-design/icons';
+import AppointmentExpandedPanel from './AppointmentExpandedPanel';
 import { notify } from '../../utils/notify';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
@@ -217,6 +219,7 @@ export default function DoctorAppointments() {
           onBack={() => { setView('slots'); setSelectedSlot(null); }}
           onVideoCall={setVideoAppt}
           onViewDocs={setRecordsAppt}
+          onAppointmentComplete={load}
         />
       )}
 
@@ -432,8 +435,13 @@ function SlotCard({ slot, onOpen }) {
 function DetailView({
   slot, appointments,
   search, setSearch, filterPayment, setFilterPayment, filterStatus, setFilterStatus,
-  onBack, onVideoCall, onViewDocs,
+  onBack, onVideoCall, onViewDocs, onAppointmentComplete,
 }) {
+  const [expandedApptId, setExpandedApptId] = useState(null);
+
+  const toggleExpand = useCallback((id) => {
+    setExpandedApptId((prev) => (prev === id ? null : id));
+  }, []);
   const pct      = slot.maxTokens > 0 ? slot.bookedTokens / slot.maxTokens : 0;
   const cfg      = SLOT_STATUS_CFG[slot.status] || SLOT_STATUS_CFG.OPEN;
   const timeLabel = fmt12(slot.startTime) + (slot.endTime ? ` – ${fmt12(slot.endTime)}` : '');
@@ -546,6 +554,9 @@ function DetailView({
               appt={appt}
               onVideoCall={onVideoCall}
               onViewDocs={onViewDocs}
+              expanded={expandedApptId === appt._id}
+              onToggleExpand={toggleExpand}
+              onAppointmentComplete={onAppointmentComplete}
             />
           ))}
         </div>
@@ -555,68 +566,95 @@ function DetailView({
 }
 
 // ── Appointment Row ───────────────────────────────────────────────────────────
-function AppointmentRow({ appt, onVideoCall, onViewDocs }) {
-  const canJoinCall   = appt.status === APPOINTMENT_STATUS.CONFIRMED && appt.type === 'video';
+function AppointmentRow({ appt, onVideoCall, onViewDocs, expanded, onToggleExpand, onAppointmentComplete }) {
+  const canJoinCall    = appt.status === APPOINTMENT_STATUS.CONFIRMED && appt.type === 'video';
   const hasAttachments = (appt.patientMedicalDocumentIds?.length ?? 0) > 0;
-  const tokenSeq      = appt.tokenNumber?.split('-').pop() ?? '–';
+  const tokenSeq       = appt.tokenNumber?.split('-').pop() ?? '–';
 
   return (
-    <Card className="rounded-2xl border-0 shadow-sm" bodyStyle={{ padding: '16px 20px' }}>
-      {/* Top row: info + tags */}
-      <div className="flex items-start justify-between gap-4">
-        {/* Left */}
-        <div className="flex gap-4 flex-1 min-w-0">
-          {/* Token badge */}
-          <div className="shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex flex-col items-center justify-center">
-            <span className="text-[9px] text-blue-400 uppercase leading-none tracking-wider">Token</span>
-            <span className="text-lg font-bold text-blue-600 leading-tight">{tokenSeq}</span>
-          </div>
+    <div>
+      <Card
+        className={`rounded-2xl border-0 shadow-sm transition-all ${expanded ? 'shadow-md ring-1 ring-blue-200' : ''}`}
+        bodyStyle={{ padding: '16px 20px' }}
+        style={{ cursor: 'default' }}
+      >
+        {/* ── Top row: info + tags ─────────────────────────────────────── */}
+        <div className="flex items-start justify-between gap-4">
+          {/* Left */}
+          <div className="flex gap-4 flex-1 min-w-0">
+            {/* Token badge */}
+            <div className="shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex flex-col items-center justify-center">
+              <span className="text-[9px] text-blue-400 uppercase leading-none tracking-wider">Token</span>
+              <span className="text-lg font-bold text-blue-600 leading-tight">{tokenSeq}</span>
+            </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-mono text-gray-400 mb-1">{appt.tokenNumber}</div>
-            {appt.reason && (
-              <div className="text-sm text-gray-700 mb-1 truncate">
-                <span className="font-medium text-gray-500">Reason: </span>{appt.reason}
-              </div>
-            )}
-            <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-              {appt.patientEmail && (
-                <span><UserOutlined className="mr-1" />{appt.patientEmail}</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-mono text-gray-400 mb-1">{appt.tokenNumber}</div>
+              {appt.reason && (
+                <div className="text-sm text-gray-700 mb-1 truncate">
+                  <span className="font-medium text-gray-500">Reason: </span>{appt.reason}
+                </div>
               )}
-              <span>
-                {appt.type === 'video' ? <VideoCameraOutlined className="mr-1" /> : <MedicineBoxOutlined className="mr-1" />}
-                {appt.type === 'video' ? 'Video Call' : 'In-Person'}
-              </span>
+              <div className="flex flex-wrap gap-3 text-xs text-gray-400">
+                {appt.patientEmail && (
+                  <span><UserOutlined className="mr-1" />{appt.patientEmail}</span>
+                )}
+                <span>
+                  {appt.type === 'video' ? <VideoCameraOutlined className="mr-1" /> : <MedicineBoxOutlined className="mr-1" />}
+                  {appt.type === 'video' ? 'Video Call' : 'In-Person'}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Right: status tags */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <Tag color={APPOINTMENT_STATUS_COLORS[appt.status] || 'default'} className="text-xs">
+              {APPOINTMENT_STATUS_LABELS[appt.status] ?? appt.status}
+            </Tag>
+            {appt.paymentStatus === 'paid'     && <Tag color="green"   className="text-xs">Paid</Tag>}
+            {appt.paymentStatus === 'pending'  && <Tag color="orange"  className="text-xs">Unpaid</Tag>}
+            {appt.paymentStatus === 'refunded' && <Tag                 className="text-xs">Refunded</Tag>}
+          </div>
         </div>
 
-        {/* Right: status tags */}
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <Tag color={APPOINTMENT_STATUS_COLORS[appt.status] || 'default'} className="text-xs">
-            {APPOINTMENT_STATUS_LABELS[appt.status] ?? appt.status}
-          </Tag>
-          {appt.paymentStatus === 'paid'     && <Tag color="green"   className="text-xs">Paid</Tag>}
-          {appt.paymentStatus === 'pending'  && <Tag color="orange"  className="text-xs">Unpaid</Tag>}
-          {appt.paymentStatus === 'refunded' && <Tag                 className="text-xs">Refunded</Tag>}
-        </div>
-      </div>
+        {/* ── Bottom: action buttons ───────────────────────────────────── */}
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            {canJoinCall && (
+              <Button type="primary" size="small" icon={<VideoCameraOutlined />} onClick={() => onVideoCall(appt)}>
+                Join Call
+              </Button>
+            )}
+            {hasAttachments && (
+              <Tooltip title={`Attached documents (${appt.patientMedicalDocumentIds.length})`}>
+                <Button size="small" icon={<PaperClipOutlined />} onClick={() => onViewDocs(appt)} />
+              </Tooltip>
+            )}
+          </div>
 
-      {/* Bottom: action buttons */}
-      {(canJoinCall || hasAttachments) && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
-          {canJoinCall && (
-            <Button type="primary" size="small" icon={<VideoCameraOutlined />} onClick={() => onVideoCall(appt)}>
-              Join Call
-            </Button>
-          )}
-          {hasAttachments && (
-            <Tooltip title={`Documents (${appt.patientMedicalDocumentIds.length})`}>
-              <Button size="small" icon={<PaperClipOutlined />} onClick={() => onViewDocs(appt)} />
-            </Tooltip>
-          )}
+          {/* Expand toggle */}
+          <Button
+            size="small"
+            type={expanded ? 'primary' : 'default'}
+            ghost={expanded}
+            icon={expanded ? <UpOutlined /> : <DownOutlined />}
+            onClick={() => onToggleExpand(appt._id)}
+            className={expanded ? 'border-blue-400 text-blue-600' : 'text-gray-500'}
+          >
+            {expanded ? 'Close Panel' : 'Open Consultation'}
+          </Button>
         </div>
+      </Card>
+
+      {/* ── Expandable consultation panel ──────────────────────────────── */}
+      {expanded && (
+        <AppointmentExpandedPanel
+          appt={appt}
+          onSaved={() => { /* optimistic — no full reload needed for save-only */ }}
+          onComplete={() => onAppointmentComplete?.()}
+        />
       )}
-    </Card>
+    </div>
   );
 }

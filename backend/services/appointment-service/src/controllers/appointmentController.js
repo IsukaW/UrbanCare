@@ -10,7 +10,7 @@ const {
   getDoctorDocuments,
   getPatientDocuments
 } = require('../services/commonServiceClient');
-const { getDoctors, getDoctorById, getDoctorSchedule, getAvailableSlots, reserveSlot, releaseSlot, getDoctorPrescriptions } = require('../services/doctorClient');
+const { getDoctors, getDoctorById, getDoctorSchedule, getAvailableSlots, reserveSlot, releaseSlot, getDoctorPrescriptions, getDoctorProfileByUserId } = require('../services/doctorClient');
 const { getPatientById, getPatientMedicalDocuments } = require('../services/patientClient');
 const { processPayment, getPaymentStatus, retrievePaymentIntent } = require('../services/paymentClient');
 
@@ -33,11 +33,33 @@ const bookAppointmentSchema = Joi.object({
   patientMedicalDocumentIds: Joi.array().items(Joi.string()).optional()
 });
 
+const prescriptionMedicationSchema = Joi.object({
+  name:         Joi.string().max(200).required(),
+  dosage:       Joi.string().max(100).allow('').optional(),
+  frequency:    Joi.string().max(100).allow('').optional(),
+  duration:     Joi.string().max(100).allow('').optional(),
+  notes:        Joi.string().max(500).allow('').optional(),
+  instructions: Joi.string().max(500).allow('').optional(),
+});
+
 const updateAppointmentSchema = Joi.object({
-  slotId: Joi.string().optional(),
-  reason: Joi.string().min(3).max(500).optional(),
-  type: Joi.string().valid('video', 'in-person').optional(),
-  status: Joi.string().valid('pending', 'confirmed', 'completed').optional()
+  slotId:  Joi.string().optional(),
+  reason:  Joi.string().min(3).max(500).optional(),
+  type:    Joi.string().valid('video', 'in-person').optional(),
+  status:  Joi.string().valid('pending', 'confirmed', 'completed').optional(),
+  prescription: Joi.object({
+    medications:     Joi.array().items(prescriptionMedicationSchema).optional(),
+    notes:           Joi.string().max(2000).allow('').optional(),
+    issuedAt:        Joi.string().isoDate().allow('', null).optional(),
+    doctorSignature: Joi.string().max(500).allow('').optional(),
+    documentUrl:     Joi.string().uri().allow('', null).optional(),
+  }).optional(),
+  consultationNotes: Joi.object({
+    diagnosis:       Joi.string().max(500).allow('').optional(),
+    observations:    Joi.string().max(2000).allow('').optional(),
+    recommendations: Joi.string().max(2000).allow('').optional(),
+    followUpDate:    Joi.date().iso().allow(null).optional(),
+  }).optional(),
 }).min(1);
 
 const requestCancellationSchema = Joi.object({
@@ -609,12 +631,29 @@ const updateAppointment = asyncHandler(async (req, res) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Appointment not found');
   }
 
-  if (!canAccessAppointment(req.user, appointment)) {
+  // canAccessAppointment uses user.id (auth userId) vs appointment.doctorId (profile _id).
+  // For doctors these differ, so we resolve the doctor profile when the fast check fails.
+  let hasAccess = canAccessAppointment(req.user, appointment);
+  if (!hasAccess && req.user.role === 'doctor') {
+    try {
+      const profile = await getDoctorProfileByUserId({
+        userId: req.user.id,
+        authorization: req.headers.authorization,
+      });
+      hasAccess = profile?._id?.toString() === appointment.doctorId?.toString();
+    } catch { /* profile not found — deny below */ }
+  }
+  if (!hasAccess) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'You do not have access to this appointment');
   }
 
-  // Only allow updates for pending/confirmed appointments
-  if (!['pending', 'confirmed'].includes(appointment.status)) {
+  // Doctors may save prescription/consultation notes on confirmed OR completed appointments.
+  // For slot/reason/type/status changes, still restrict to pending/confirmed.
+  const isConsultationOnlyUpdate =
+    !value.slotId && !value.reason && !value.type && !value.status &&
+    (value.prescription !== undefined || value.consultationNotes !== undefined);
+
+  if (!isConsultationOnlyUpdate && !['pending', 'confirmed'].includes(appointment.status)) {
     throw new ApiError(
       StatusCodes.CONFLICT,
       `Cannot update appointment with status "${appointment.status}"`
@@ -688,6 +727,19 @@ const updateAppointment = asyncHandler(async (req, res) => {
   }
   if (value.status !== undefined) {
     appointment.status = value.status;
+  }
+  if (value.prescription !== undefined) {
+    const existingRx = appointment.prescription?.toObject?.() ?? appointment.prescription ?? {};
+    appointment.prescription = {
+      ...existingRx,
+      ...value.prescription,
+      issuedAt: value.prescription.issuedAt
+        ? new Date(value.prescription.issuedAt)
+        : (existingRx.issuedAt ?? new Date()),
+    };
+  }
+  if (value.consultationNotes !== undefined) {
+    appointment.consultationNotes = value.consultationNotes;
   }
 
   appointment.updatedBy = req.user.id;
