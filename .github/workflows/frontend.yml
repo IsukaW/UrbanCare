@@ -52,7 +52,9 @@ jobs:
             docker run -d --name ${{ env.SERVICE_NAME }} \
               --restart always \
               --network urbancare \
+              -e SERVER_IP=${{ secrets.PROD_HOST }} \
               -p 80:80 \
+              -p 443:443 \
               ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Rollback on failure
@@ -71,6 +73,8 @@ jobs:
               docker run -d --name ${{ env.SERVICE_NAME }} \
                 --restart always \
                 --network urbancare \
+                -e SERVER_IP=${{ secrets.PROD_HOST }} \
                 -p 80:80 \
+                -p 443:443 \
                 "$PREVIOUS"
             fi
