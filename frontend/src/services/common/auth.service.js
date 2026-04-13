@@ -34,4 +34,22 @@ export const authService = {
   isAuthenticated() {
     return !!tokenUtil.getToken();
   },
+
+  // Send OTP to the given email
+  async forgotPassword(email) {
+    const { data } = await authApi.forgotPassword(email);
+    return data;
+  },
+
+  // Verify OTP; returns the short-lived resetToken on success
+  async verifyCode(email, code) {
+    const { data } = await authApi.verifyCode(email, code);
+    return data.resetToken;
+  },
+
+  // Set a new password using the resetToken obtained from verifyCode
+  async resetPassword(resetToken, newPassword) {
+    const { data } = await authApi.resetPassword(resetToken, newPassword);
+    return data;
+  },
 };

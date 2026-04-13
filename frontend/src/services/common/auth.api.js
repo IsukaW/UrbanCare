@@ -4,4 +4,8 @@ import { commonClient } from '../../utils/httpClients';
 export const authApi = {
   register: (data) => commonClient.post('/auth/register', data),
   login: (credentials) => commonClient.post('/auth/login', credentials),
+  forgotPassword: (email) => commonClient.post('/auth/forgot-password', { email }),
+  verifyCode: (email, code) => commonClient.post('/auth/verify-code', { email, code }),
+  resetPassword: (resetToken, newPassword) =>
+    commonClient.post('/auth/reset-password', { resetToken, newPassword }),
 };

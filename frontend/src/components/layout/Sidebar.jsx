@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { ROLES } from '../../constants/roles';
 import useAuthStore from '../../store/authStore';
+import logo from '../../images/UrbanCare_logo.png';
 
 const { Sider } = Layout;
 const { Text } = Typography;
@@ -134,15 +135,19 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     >
       {/* Logo */}
       <div
-        className="flex items-center gap-3 px-4 py-5"
-        style={{ borderBottom: '1px solid #f0f0f0' }}
+        className="flex items-center gap-2 px-3"
+        style={{ borderBottom: '1px solid #f0f0f0', overflow: 'hidden', height: 56 }}
       >
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-          style={{ background: '#1677ff' }}
-        >
-          U
-        </div>
+        <img
+          src={logo}
+          alt="UrbanCare"
+          className="flex-shrink-0"
+          style={{
+            width: collapsed ? 80 : 90,
+            height: 'auto',
+            margin: collapsed ? '-18px -18px -18px -18px' : '-18px -10px -18px -14px',
+          }}
+        />
         {!collapsed && (
           <span className="font-bold text-gray-800 text-base">UrbanCare</span>
         )}
