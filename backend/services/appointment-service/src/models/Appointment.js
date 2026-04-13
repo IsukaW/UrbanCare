@@ -32,14 +32,31 @@ const appointmentSchema = new mongoose.Schema(
       }
     ],
     
-    // Prescription (fetched from common service)
+    // Prescription
     prescription: {
-    issuedAt:  { type: Date },
-    doctorSignature: { type: String },
-    medications: [{ name: String, dosage: String, instructions: String }],
-    notes:     { type: String },
-    documentUrl: { type: String }  // from Common Service (document storage)
-  },
+      issuedAt:        { type: Date },
+      doctorSignature: { type: String },
+      medications: [
+        {
+          name:         String,
+          dosage:       String,
+          frequency:    String,
+          duration:     String,
+          notes:        String,
+          instructions: String, // legacy field kept for backward compatibility
+        }
+      ],
+      notes:       { type: String },
+      documentUrl: { type: String },
+    },
+
+    // Consultation summary added by doctor during/after appointment
+    consultationNotes: {
+      diagnosis:       { type: String },
+      observations:    { type: String },
+      recommendations: { type: String },
+      followUpDate:    { type: Date },
+    },
 
     // Reference to doctor's existing prescriptions (for context during appointment)
     doctorPrescriptionIds: [{ type: String }],
