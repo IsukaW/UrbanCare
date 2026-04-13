@@ -20,7 +20,8 @@ const bookSchema = Joi.object({
   reason: Joi.string().min(3).max(500).required(),
   patientEmail: Joi.string().email().optional(),
   patientPhoneNumber: Joi.string().optional(),
-  autoPay: Joi.boolean().optional()
+  autoPay: Joi.boolean().optional(),
+  patientMedicalDocumentIds: Joi.array().items(Joi.string()).optional()
 });
 
 const cancellationSchema = Joi.object({

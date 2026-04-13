@@ -28,9 +28,9 @@ const bookAppointmentSchema = Joi.object({
   type: Joi.string().valid('video', 'in-person').required(),
   reason: Joi.string().min(3).max(500).required(),
   patientEmail: Joi.string().email().optional(),
-  patientPhoneNumber: Joi.string().optional()
-  ,
-  autoPay: Joi.boolean().optional()
+  patientPhoneNumber: Joi.string().optional(),
+  autoPay: Joi.boolean().optional(),
+  patientMedicalDocumentIds: Joi.array().items(Joi.string()).optional()
 });
 
 const updateAppointmentSchema = Joi.object({
@@ -361,7 +361,7 @@ const bookAppointment = asyncHandler(async (req, res) => {
       createdBy: req.user.id,
       updatedBy: req.user.id,
       doctorPrescriptionIds: [], // Will be populated in step 8
-      patientMedicalDocumentIds: [] // Will be populated in step 9
+      patientMedicalDocumentIds: value.patientMedicalDocumentIds ?? [] // Will be merged in step 9
     });
 
     // 6. Reserve slot in doctor-service
@@ -442,15 +442,21 @@ const bookAppointment = asyncHandler(async (req, res) => {
       // Non-critical - continue even if prescriptions not available
     }
 
-    // 9. Get and store patient's medical documents if available (optional)
+    // 9. Merge any explicitly provided patientMedicalDocumentIds with the existing set.
+    //    If none were provided, optionally fetch all of the patient's records for reference.
     try {
-      const patientDocuments = await getPatientMedicalDocuments({
-        patientId: value.patientId,
-        authorization
-      });
-      if (patientDocuments.length > 0) {
-        // Store document IDs for reference
-        appointment.patientMedicalDocumentIds = patientDocuments.map((d) => d._id || d.id);
+      if (!value.patientMedicalDocumentIds || value.patientMedicalDocumentIds.length === 0) {
+        // No explicit docs provided — fetch all patient documents for reference
+        const patientDocuments = await getPatientMedicalDocuments({
+          patientId: value.patientId,
+          authorization
+        });
+        if (patientDocuments.length > 0) {
+          appointment.patientMedicalDocumentIds = patientDocuments.map((d) => d._id || d.id);
+        }
+      } else {
+        // Explicit IDs already set during create — keep them (no override needed)
+        // patientMedicalDocumentIds is already set from value above
       }
     } catch (error) {
       // Non-critical - continue even if documents fail
