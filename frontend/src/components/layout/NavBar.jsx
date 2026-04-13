@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout, Avatar, Typography, Dropdown, Button, Space, Tag } from 'antd';
 import {
   UserOutlined,
@@ -11,6 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
 import { notify } from '../../utils/notify';
+import { documentService } from '../../services/common/document.service';
+import { fetchDoctorProfileForSession } from '../../utils/doctorSession';
 
 const { Header } = Layout;
 const { Text } = Typography;
@@ -25,6 +27,46 @@ export default function NavBar({ collapsed, onToggle }) {
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
+  const [doctorPhotoUrl, setDoctorPhotoUrl] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = null;
+
+    async function loadDoctorPhoto() {
+      if (user?.role !== 'doctor') {
+        setDoctorPhotoUrl(null);
+        return;
+      }
+
+      const profile = await fetchDoctorProfileForSession(user);
+      const documentId = profile?.profilePhotoDocumentId ?? user?.profilePhotoDocumentId;
+
+      if (!documentId) {
+        if (!cancelled) setDoctorPhotoUrl(null);
+        return;
+      }
+
+      try {
+        const url = await documentService.getViewUrl(documentId);
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        objectUrl = url;
+        setDoctorPhotoUrl(url);
+      } catch {
+        if (!cancelled) setDoctorPhotoUrl(null);
+      }
+    }
+
+    loadDoctorPhoto();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [user]);
 
   const handleLogout = () => {
     notify.success('Signed out', 'See you next time!');
@@ -84,6 +126,7 @@ export default function NavBar({ collapsed, onToggle }) {
         <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
           <Avatar
             size={34}
+            src={user?.role === 'doctor' ? doctorPhotoUrl : undefined}
             style={{
               background: AVATAR_COLORS[user?.role] ?? '#1677ff',
               cursor: 'pointer',
@@ -91,7 +134,7 @@ export default function NavBar({ collapsed, onToggle }) {
               fontWeight: 600,
             }}
           >
-            {user?.firstName?.[0]?.toUpperCase()}
+            {!doctorPhotoUrl ? user?.firstName?.[0]?.toUpperCase() : null}
           </Avatar>
         </Dropdown>
       </Space>
