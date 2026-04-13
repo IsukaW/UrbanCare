@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card, Form, Input, Button, Select, DatePicker,
-  Typography, Spin, Tag, Radio, Alert,
+  Typography, Spin, Tag, Radio, Alert, Tooltip, Upload, message,
 } from 'antd';
 import {
   CalendarOutlined,
   ClockCircleOutlined,
   UserOutlined,
+  UploadOutlined,
+  PaperClipOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
+import { patientService } from '../../services/patient/patient.service';
+import { medicalReportService } from '../../services/patient/medicalReport.service';
 import useAuthStore from '../../store/authStore';
 import { notify } from '../../utils/notify';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -34,6 +39,28 @@ export default function BookAppointment() {
   const [saving, setSaving]                 = useState(false);
   const [form]                              = Form.useForm();
   const [pendingAppointment, setPendingAppointment] = useState(null);
+  const [patientProfileId, setPatientProfileId] = useState(null);
+  const [medicalRecords, setMedicalRecords]     = useState([]);
+  const [loadingRecords, setLoadingRecords]     = useState(true);
+  const [recordsError, setRecordsError]         = useState(false);
+  // New files the patient wants to upload directly at booking time
+  const [newFiles, setNewFiles]     = useState([]); // [{ uid, file, name, status, docId }]
+  const [uploading, setUploading]   = useState(false);
+
+  // ── Load patient profile + medical records on mount ────────────────────────
+  useEffect(() => {
+    patientService
+      .getById(user.id)
+      .then((profile) => {
+        setPatientProfileId(profile._id);
+        return medicalReportService.list(profile._id);
+      })
+      .then((records) => {
+        setMedicalRecords(Array.isArray(records) ? records : []);
+      })
+      .catch(() => setRecordsError(true))
+      .finally(() => setLoadingRecords(false));
+  }, []);
 
   // ── Load all doctors on mount ─────────────────────────────────────────────
   useEffect(() => {
@@ -89,6 +116,40 @@ export default function BookAppointment() {
 
     setSaving(true);
     try {
+      // 1. Upload any newly added files first so we have their IDs
+      const uploadedIds = [];
+      if (newFiles.length > 0 && patientProfileId) {
+        setUploading(true);
+        for (const item of newFiles) {
+          if (item.docId) {
+            // Already uploaded (fast re-submit)
+            uploadedIds.push(item.docId);
+            continue;
+          }
+          try {
+            const result = await medicalReportService.upload(patientProfileId, item.file, {
+              category: 'other',
+              description: `Attached during appointment booking`,
+            });
+            uploadedIds.push(result._id ?? result.data?._id);
+            // Mark as done in local state
+            setNewFiles((prev) =>
+              prev.map((f) => f.uid === item.uid ? { ...f, docId: result._id ?? result.data?._id, status: 'done' } : f)
+            );
+          } catch (uploadErr) {
+            notify.error('File upload failed', `${item.name}: ${uploadErr.message}`);
+            setSaving(false);
+            setUploading(false);
+            return;
+          }
+        }
+        setUploading(false);
+      }
+
+      // 2. Combine: selected existing records + newly uploaded IDs
+      const allDocIds = [...(values.medicalRecords ?? []), ...uploadedIds];
+
+      // 3. Book the appointment
       const appointment = await appointmentService.book({
         patientId: user.id,
         doctorId: selectedDoctor,
@@ -97,6 +158,7 @@ export default function BookAppointment() {
         reason: values.reason,
         patientEmail: user.email,
         patientPhoneNumber: user.phoneNumber,
+        patientMedicalDocumentIds: allDocIds,
       });
 
       // Show payment modal before confirming
@@ -114,6 +176,7 @@ export default function BookAppointment() {
     setSelectedDate(null);
     setSlots([]);
     setSelectedSlot(null);
+    setNewFiles([]);
   };
 
   const handlePaymentSuccess = (confirmedAppointment) => {
@@ -320,6 +383,110 @@ export default function BookAppointment() {
                     style={{ resize: 'none' }}
                   />
                 </Form.Item>
+              </Card>
+
+              {/* Medical Records */}
+              <Card className="rounded-2xl shadow-sm border-0">
+                <div className="mb-1 font-semibold text-base text-gray-700">Attach Medical Documents</div>
+                <div className="mb-3 text-xs text-gray-400">
+                  Optional — share relevant documents with the doctor.
+                </div>
+
+                {/* ── Upload new files ── */}
+                <div className="mb-4">
+                  <div className="text-xs text-gray-500 font-medium mb-2">Upload new files</div>
+                  <Upload
+                    multiple
+                    beforeUpload={(file) => {
+                      const isAllowed =
+                        file.type === 'application/pdf' ||
+                        file.type.startsWith('image/');
+                      if (!isAllowed) {
+                        message.error(`${file.name} is not a PDF or image.`);
+                        return Upload.LIST_IGNORE;
+                      }
+                      if (file.size > 10 * 1024 * 1024) {
+                        message.error(`${file.name} exceeds 10 MB.`);
+                        return Upload.LIST_IGNORE;
+                      }
+                      setNewFiles((prev) => [
+                        ...prev,
+                        { uid: file.uid, file, name: file.name, status: 'ready', docId: null },
+                      ]);
+                      return false; // prevent auto-upload; we upload on submit
+                    }}
+                    onRemove={(file) =>
+                      setNewFiles((prev) => prev.filter((f) => f.uid !== file.uid))
+                    }
+                    fileList={newFiles.map((f) => ({
+                      uid: f.uid,
+                      name: f.name,
+                      status: f.status === 'done' ? 'done' : 'ready',
+                    }))}
+                    accept=".pdf,image/*"
+                    showUploadList={{
+                      showRemoveIcon: true,
+                      removeIcon: <DeleteOutlined />,
+                    }}
+                  >
+                    <Button icon={<UploadOutlined />} className="w-full" disabled={!patientProfileId}>
+                      {patientProfileId ? 'Choose files (PDF / Image)' : 'Loading profile…'}
+                    </Button>
+                  </Upload>
+                </div>
+
+                {/* ── Select from existing records ── */}
+                <div>
+                  <div className="text-xs text-gray-500 font-medium mb-2">
+                    Or select from saved records{' '}
+                    <a href="/patient/medical-records" target="_blank" rel="noreferrer"
+                      className="text-blue-500 underline">(manage)</a>
+                  </div>
+                  {recordsError ? (
+                    <Alert
+                      type="warning"
+                      message="Could not load your medical records"
+                      description="Make sure your patient profile is set up."
+                      showIcon
+                      className="rounded-xl"
+                    />
+                  ) : (
+                    <Form.Item name="medicalRecords" style={{ marginBottom: 0 }}>
+                      <Select
+                        mode="multiple"
+                        allowClear
+                        loading={loadingRecords}
+                        disabled={loadingRecords}
+                        placeholder={
+                          loadingRecords
+                            ? 'Loading your records…'
+                            : medicalRecords.length === 0
+                            ? 'No saved records found'
+                            : 'Select records to attach…'
+                        }
+                        optionFilterProp="label"
+                        options={medicalRecords.map((r) => ({
+                          value: r._id,
+                          label: `${r.originalName} — ${r.category?.replace('_', ' ')}`,
+                        }))}
+                        notFoundContent={
+                          loadingRecords ? (
+                            <div className="flex items-center gap-2 py-2 justify-center">
+                              <Spin size="small" />
+                              <span className="text-gray-400 text-sm">Loading…</span>
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-gray-400 text-sm">
+                              No saved records.{' '}
+                              <a href="/patient/medical-records" target="_blank" rel="noreferrer"
+                                className="text-blue-500 underline">Upload records</a>
+                            </div>
+                          )
+                        }
+                      />
+                    </Form.Item>
+                  )}
+                </div>
               </Card>
 
               {/* Submit */}

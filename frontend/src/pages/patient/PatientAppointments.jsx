@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card, Typography, Button, Tag, Select, Spin, Empty, Popconfirm, Badge, Tooltip, Pagination,
+  Modal, List,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
   CloseCircleOutlined, VideoCameraOutlined, ReloadOutlined,
   MedicineBoxOutlined, CreditCardOutlined,
+  FileTextOutlined, EyeOutlined, DownloadOutlined, PaperClipOutlined,
 } from '@ant-design/icons';
 import { notify } from '../../utils/notify';
 import dayjs from 'dayjs';
 import { appointmentService } from '../../services/appointment/appointment.service';
+import { medicalReportService } from '../../services/patient/medicalReport.service';
+import { medicalReportApi } from '../../services/patient/medicalReport.api';
+import { patientService } from '../../services/patient/patient.service';
 import {
   APPOINTMENT_STATUS, APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS,
 } from '../../constants/appointment';
@@ -32,6 +37,11 @@ export default function PatientAppointments() {
   const [payingAppt, setPayingAppt]     = useState(null);
   const [page, setPage]                 = useState(1);
   const [total, setTotal]               = useState(0);
+  // Attachments modal
+  const [docsAppt, setDocsAppt]         = useState(null);
+  const [linkedDocs, setLinkedDocs]     = useState([]);
+  const [docsLoading, setDocsLoading]   = useState(false);
+  const [patientProfileId, setPatientProfileId] = useState(null);
   const PAGE_SIZE = 10;
 
   const load = async (status = statusFilter, currentPage = page) => {
@@ -53,6 +63,30 @@ export default function PatientAppointments() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // ── Resolve patient profile once (needed for document APIs) ───────────────
+  useEffect(() => {
+    patientService.getById(user.id)
+      .then((profile) => setPatientProfileId(profile._id))
+      .catch(() => {}); // non-critical
+  }, [user.id]);
+
+  // ── Load linked documents when docsAppt is set ────────────────────────────
+  useEffect(() => {
+    if (!docsAppt) { setLinkedDocs([]); return; }
+    const linkedIds = new Set((docsAppt.patientMedicalDocumentIds ?? []).map(String));
+    if (linkedIds.size === 0) { setLinkedDocs([]); return; }
+    setDocsLoading(true);
+    // Use the resolved patientProfileId or fall back to fetching profile
+    const fetchDocs = patientProfileId
+      ? Promise.resolve(patientProfileId)
+      : patientService.getById(user.id).then((p) => { setPatientProfileId(p._id); return p._id; });
+    fetchDocs
+      .then((pid) => medicalReportService.list(pid, { limit: 100 }))
+      .then((allDocs) => setLinkedDocs(allDocs.filter((d) => linkedIds.has(String(d._id)))))
+      .catch(() => notify.error('Failed to load attachments'))
+      .finally(() => setDocsLoading(false));
+  }, [docsAppt]);
 
   const handleCancel = async (appt) => {
     setCancelling(appt._id);
@@ -142,6 +176,7 @@ export default function PatientAppointments() {
               cancelling={cancelling}
               onVideoCall={() => setVideoAppt(appt)}
               onPayNow={() => setPayingAppt(appt)}
+              onViewDocs={() => setDocsAppt(appt)}
             />
           ))}
         </div>
@@ -180,55 +215,119 @@ export default function PatientAppointments() {
         onSuccess={handlePaymentSuccess}
         onCancel={() => setPayingAppt(null)}
       />
+
+      {/* Attached Documents Modal */}
+      <Modal
+        open={!!docsAppt}
+        title={
+          <span className="flex items-center gap-2">
+            <PaperClipOutlined className="text-blue-500" />
+            Attached Medical Documents
+          </span>
+        }
+        footer={null}
+        onCancel={() => setDocsAppt(null)}
+        width={620}
+      >
+        {docsLoading ? (
+          <div className="flex justify-center py-10"><Spin /></div>
+        ) : linkedDocs.length === 0 ? (
+          <Empty description="No documents attached to this appointment" />
+        ) : (
+          <List
+            dataSource={linkedDocs}
+            renderItem={(doc) => (
+              <List.Item
+                actions={[
+                  <Tooltip title="View" key="view">
+                    <Button
+                      size="small"
+                      icon={<EyeOutlined />}
+                      onClick={async () => {
+                        try {
+                          const url = await medicalReportApi.getViewUrl(patientProfileId, doc._id);
+                          window.open(url, '_blank');
+                        } catch {
+                          notify.error('Failed to open document');
+                        }
+                      }}
+                    />
+                  </Tooltip>,
+                  <Tooltip title="Download" key="dl">
+                    <Button
+                      size="small"
+                      icon={<DownloadOutlined />}
+                      onClick={async () => {
+                        try {
+                          await medicalReportApi.download(patientProfileId, doc._id, doc.originalName);
+                        } catch {
+                          notify.error('Failed to download document');
+                        }
+                      }}
+                    />
+                  </Tooltip>,
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={<FileTextOutlined className="text-blue-400 text-xl mt-1" />}
+                  title={doc.originalName}
+                  description={
+                    <span className="flex gap-2 flex-wrap">
+                      <Tag color="blue">{doc.category?.replace('_', ' ')}</Tag>
+                      {doc.description && (
+                        <span className="text-gray-500 text-xs">{doc.description}</span>
+                      )}
+                    </span>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
 
-function AppointmentCard({ appt, onCancel, cancelling, onVideoCall, onPayNow }) {
+function AppointmentCard({ appt, onCancel, cancelling, onVideoCall, onPayNow, onViewDocs }) {
   const isCancellable  = CANCELLABLE.includes(appt.status);
   const isVideo        = appt.type === 'video';
   const isConfirmed    = appt.status === APPOINTMENT_STATUS.CONFIRMED;
   const needsPayment   = appt.paymentStatus === 'pending' && appt.status === APPOINTMENT_STATUS.PENDING;
+  const hasAttachments = (appt.patientMedicalDocumentIds?.length ?? 0) > 0;
 
   return (
     <Card
       className="rounded-2xl shadow-sm border-0"
       bodyStyle={{ padding: '20px 24px' }}
     >
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        {/* Left: main info */}
+      {/* ── Top: info + status tags ── */}
+      <div className="flex items-start justify-between gap-4">
+        {/* Left: icon + details */}
         <div className="flex gap-4 flex-1 min-w-0">
-          {/* Icon */}
           <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
             <MedicineBoxOutlined className="text-blue-500 text-xl" />
           </div>
-
           <div className="flex-1 min-w-0">
-            {/* Doctor + token */}
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="font-semibold text-gray-800 text-base">{appt.doctorName}</span>
               <Tag color="blue" className="font-mono text-xs">{appt.tokenNumber}</Tag>
             </div>
-
             <div className="text-sm text-gray-500 mb-2">{appt.doctorSpecialty}</div>
-
-            {/* Date / time / type */}
             <div className="flex flex-wrap gap-3 text-sm text-gray-600">
               <span className="flex items-center gap-1">
                 <CalendarOutlined />
-                {dayjs(appt.scheduledAt).format('DD MMM YYYY')}
+                {dayjs.utc(appt.scheduledAt).format('DD MMM YYYY')}
               </span>
               <span className="flex items-center gap-1">
                 <ClockCircleOutlined />
-                {dayjs(appt.scheduledAt).format('h:mm A')}
+                {dayjs.utc(appt.scheduledAt).format('h:mm A')}
               </span>
               <span className="flex items-center gap-1">
                 {isVideo ? <VideoCameraOutlined /> : <UserOutlined />}
                 {isVideo ? 'Video Call' : 'In-Person'}
               </span>
             </div>
-
-            {/* Reason */}
             {appt.reason && (
               <div className="mt-2 text-sm text-gray-500 truncate max-w-full sm:max-w-md">
                 <span className="font-medium text-gray-600">Reason:</span> {appt.reason}
@@ -237,58 +336,68 @@ function AppointmentCard({ appt, onCancel, cancelling, onVideoCall, onPayNow }) 
           </div>
         </div>
 
-        {/* Right: status + actions */}
-        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-3 sm:shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-gray-100">
-          <div className="flex gap-2 flex-wrap">
-            <Tag color={APPOINTMENT_STATUS_COLORS[appt.status]}>
-              {APPOINTMENT_STATUS_LABELS[appt.status] ?? appt.status}
-            </Tag>
-            {appt.paymentStatus === 'paid' && <Tag color="green">Paid</Tag>}
-            {appt.paymentStatus === 'pending' && <Tag color="orange">Unpaid</Tag>}
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            {isConfirmed && isVideo && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<VideoCameraOutlined />}
-                onClick={onVideoCall}
-              >
-                Join Call
-              </Button>
-            )}
-            {needsPayment && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<CreditCardOutlined />}
-                onClick={onPayNow}
-              >
-                Pay Now
-              </Button>
-            )}
-            {isCancellable && (
-              <Popconfirm
-                title="Cancel this appointment?"
-                description="This action cannot be undone."
-                onConfirm={() => onCancel(appt)}
-                okText="Yes, cancel"
-                okType="danger"
-              >
-                <Button
-                  danger
-                  size="small"
-                  icon={<CloseCircleOutlined />}
-                  loading={cancelling === appt._id}
-                >
-                  Cancel
-                </Button>
-              </Popconfirm>
-            )}
-          </div>
+        {/* Right: status tags */}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <Tag color={APPOINTMENT_STATUS_COLORS[appt.status]}>
+            {APPOINTMENT_STATUS_LABELS[appt.status] ?? appt.status}
+          </Tag>
+          {appt.paymentStatus === 'paid' && <Tag color="green">Paid</Tag>}
+          {appt.paymentStatus === 'pending' && <Tag color="orange">Unpaid</Tag>}
         </div>
       </div>
+
+      {/* ── Bottom: action buttons ── */}
+      {(isConfirmed || needsPayment || hasAttachments || isCancellable) && (
+        <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-end gap-2">
+          {isConfirmed && isVideo && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<VideoCameraOutlined />}
+              onClick={onVideoCall}
+            >
+              Join Call
+            </Button>
+          )}
+          {needsPayment && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<CreditCardOutlined />}
+              onClick={onPayNow}
+            >
+              Pay Now
+            </Button>
+          )}
+          {hasAttachments && (
+            <Tooltip title={`Attachments (${appt.patientMedicalDocumentIds.length})`}>
+              <Button
+                size="small"
+                icon={<PaperClipOutlined />}
+                onClick={onViewDocs}
+              />
+            </Tooltip>
+          )}
+          {isCancellable && (
+            <Popconfirm
+              title="Cancel this appointment?"
+              description="This action cannot be undone."
+              onConfirm={() => onCancel(appt)}
+              okText="Yes, cancel"
+              okType="danger"
+            >
+              <Button
+                danger
+                size="small"
+                icon={<CloseCircleOutlined />}
+                loading={cancelling === appt._id}
+              >
+                Cancel
+              </Button>
+            </Popconfirm>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

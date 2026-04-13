@@ -15,6 +15,8 @@ const canRead = (doc, user) => {
   if (doc.visibleTo.includes(user.id)) return true;
   // Profile photos are public to all authenticated users
   if (doc.category === 'profile_photo') return true;
+  // Doctors can read any patient-linked document (for consultation)
+  if (user.role === 'doctor' && doc.linkedPatientId) return true;
   return false;
 };
 
@@ -123,10 +125,19 @@ const listDocuments = asyncHandler(async (req, res) => {
 
   // Access filter
   if (req.user.role !== 'admin') {
-    filter.$or = [
-      { 'uploadedBy.userId': req.user.id },
-      { visibleTo: req.user.id },
-    ];
+    if (req.user.role === 'doctor') {
+      // Doctors can list their own docs + docs shared with them + patient-linked docs
+      filter.$or = [
+        { 'uploadedBy.userId': req.user.id },
+        { visibleTo: req.user.id },
+        { linkedPatientId: { $exists: true, $ne: null } },
+      ];
+    } else {
+      filter.$or = [
+        { 'uploadedBy.userId': req.user.id },
+        { visibleTo: req.user.id },
+      ];
+    }
   }
 
   // Optional category filter

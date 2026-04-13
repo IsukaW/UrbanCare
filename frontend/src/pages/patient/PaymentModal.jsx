@@ -89,7 +89,7 @@ export default function PaymentModal({ open, appointment, onSuccess, onCancel })
         {appt.scheduledAt && (
           <div className="flex justify-between text-sm">
             <Text type="secondary">Date & Time</Text>
-            <Text>{dayjs(appt.scheduledAt).format('DD MMM YYYY, h:mm A')}</Text>
+            <Text>{dayjs.utc(appt.scheduledAt).format('DD MMM YYYY, h:mm A')}</Text>
           </div>
         )}
         {appt.tokenNumber && (
