@@ -1,36 +1,25 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Typography, Card } from 'antd';
-import { MailOutlined, LockOutlined } from '@ant-design/icons';
+import { MailOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/common/auth.service';
-import useAuthStore from '../../store/authStore';
-import logo from '../../images/UrbanCare_logo.png';
-import { ROLES } from '../../constants/roles';
 import { notify } from '../../utils/notify';
+import logo from '../../images/UrbanCare_logo.png';
 
 const { Title, Text } = Typography;
 
-const ROLE_HOME = {
-  [ROLES.ADMIN]: '/admin/dashboard',
-  [ROLES.DOCTOR]: '/doctor/dashboard',
-  [ROLES.PATIENT]: '/patient/dashboard',
-};
-
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((s) => s.setAuth);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async ({ email }) => {
     setLoading(true);
     try {
-      const { token, user } = await authService.login(values);
-      setAuth(token, user);
-      notify.success('Welcome back!', `Signed in as ${user.firstName}`);
-      navigate(ROLE_HOME[user.role] ?? '/', { replace: true });
+      await authService.forgotPassword(email);
+      // Always navigate regardless of whether the email exists (prevents enumeration)
+      navigate('/verify-code', { state: { email } });
     } catch (err) {
-      // Show the exact message from the backend (e.g. "Invalid email or password")
-      notify.error('Sign in failed', err.message);
+      notify.error('Request failed', err.message);
     } finally {
       setLoading(false);
     }
@@ -43,7 +32,6 @@ export default function LoginPage() {
         style={{ maxWidth: 440, border: 'none' }}
         bodyStyle={{ padding: '12px 28px 20px' }}
       >
-        {/* Logo / Title */}
         <div className="text-center mb-3">
           <img
             src={logo}
@@ -51,10 +39,10 @@ export default function LoginPage() {
             style={{ width: 220, height: 'auto', margin: '-30px auto -20px', display: 'block' }}
           />
           <Title level={2} style={{ margin: 0 }}>
-            UrbanCare
+            Forgot Password
           </Title>
           <Text type="secondary" className="text-sm">
-            Sign in to your account
+            Enter your registered email and we&apos;ll send you a reset code.
           </Text>
         </div>
 
@@ -70,23 +58,6 @@ export default function LoginPage() {
             <Input prefix={<MailOutlined className="text-gray-400" />} placeholder="you@example.com" />
           </Form.Item>
 
-          <div style={{ position: 'relative' }}>
-            <Form.Item
-              name="password"
-              label="Password"
-              rules={[{ required: true, message: 'Password is required' }]}
-            >
-              <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="••••••••" />
-            </Form.Item>
-            <Link
-              to="/forgot-password"
-              className="text-xs text-blue-600 hover:text-blue-700 font-normal"
-              style={{ position: 'absolute', top: 0, right: 0, lineHeight: '32px' }}
-            >
-              Forgot Password?
-            </Link>
-          </div>
-
           <Form.Item className="mb-2">
             <Button
               type="primary"
@@ -95,18 +66,15 @@ export default function LoginPage() {
               block
               className="h-11 font-semibold"
             >
-              Sign In
+              Send Reset Code
             </Button>
           </Form.Item>
         </Form>
 
         <div className="text-center mt-4">
-          <Text type="secondary" className="text-sm">
-            Don&apos;t have an account?{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-700">
-              Register
-            </Link>
-          </Text>
+          <Link to="/login" className="text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+            <ArrowLeftOutlined className="text-xs" /> Back to Sign In
+          </Link>
         </div>
       </Card>
     </div>

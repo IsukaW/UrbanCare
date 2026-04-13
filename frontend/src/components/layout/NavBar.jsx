@@ -13,6 +13,7 @@ import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
 import { notify } from '../../utils/notify';
 import { documentService } from '../../services/common/document.service';
 import { fetchDoctorProfileForSession } from '../../utils/doctorSession';
+import logo from '../../images/UrbanCare_logo.png';
 
 const { Header } = Layout;
 const { Text } = Typography;
@@ -118,6 +119,25 @@ export default function NavBar({ collapsed, onToggle }) {
         onClick={onToggle}
         className="text-gray-500"
       />
+
+      {/* Center: logo (mobile only) */}
+      <div
+        className="md:hidden flex items-center"
+        style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          pointerEvents: 'none',
+          overflow: 'hidden',
+          height: 56,
+        }}
+      >
+        <img
+          src={logo}
+          alt="UrbanCare"
+          style={{ width: 90, height: 'auto', margin: '-18px 0' }}
+        />
+      </div>
 
       {/* Right: role badge + avatar */}
       <Space size={12}>
