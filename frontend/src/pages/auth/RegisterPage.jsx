@@ -10,6 +10,7 @@ import {
 import { Link } from 'react-router-dom';
 import { authService } from '../../services/common/auth.service';
 import { ROLES } from '../../constants/roles';
+import logo from '../../images/UrbanCare_logo.png';
 import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
@@ -38,12 +39,14 @@ export default function RegisterPage() {
         <Card
           className="w-full shadow-2xl rounded-2xl"
           style={{ maxWidth: 480, border: 'none' }}
-          bodyStyle={{ padding: '40px' }}
+          bodyStyle={{ padding: '12px 28px 20px' }}
         >
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-600 rounded-2xl mb-4">
-              <span className="text-white font-bold text-2xl">U</span>
-            </div>
+          <div className="text-center mb-3">
+            <img
+              src={logo}
+              alt="UrbanCare"
+              style={{ width: 220, height: 'auto', margin: '-30px auto -20px', display: 'block' }}
+            />
           </div>
           <Alert
             type="success"
@@ -74,7 +77,7 @@ export default function RegisterPage() {
       <Card
         className="w-full shadow-2xl rounded-2xl"
         style={{ maxWidth: 520, border: 'none' }}
-        bodyStyle={{ padding: '40px 40px 32px' }}
+        bodyStyle={{ padding: '12px 28px 20px' }}
       >
         {/* Toggle doctor/patient mode */}
         <div className="flex justify-end -mt-2 mb-2">
@@ -88,10 +91,12 @@ export default function RegisterPage() {
           </Button>
         </div>
 
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-600 rounded-2xl mb-4">
-            <span className="text-white font-bold text-2xl">U</span>
-          </div>
+        <div className="text-center mb-3">
+          <img
+            src={logo}
+            alt="UrbanCare"
+            style={{ width: 220, height: 'auto', margin: '-30px auto -20px', display: 'block' }}
+          />
           <Title level={2} style={{ margin: 0 }}>
             {mode === 'doctor' ? 'Doctor Registration' : 'Create Account'}
           </Title>

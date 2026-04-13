@@ -9,6 +9,9 @@ import { ROLES } from '../constants/roles';
 // Auth pages
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import VerifyOtpPage from '../pages/auth/VerifyOtpPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 
 // Admin pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -51,6 +54,9 @@ export default function AppRouter() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/verify-code" element={<VerifyOtpPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected + layout shell */}
         <Route
