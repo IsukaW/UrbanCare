@@ -22,8 +22,8 @@ export const patientService = {
     return data.patient ?? data;
   },
 
-  async analyseSymptoms(symptoms) {
-    const { data } = await patientApi.analyseSymptoms(symptoms);
+  async analyseSymptoms(payload) {
+    const { data } = await patientApi.analyseSymptoms(payload);
     return data;
   },
 };
