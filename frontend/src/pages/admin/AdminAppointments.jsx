@@ -140,10 +140,10 @@ export default function AdminAppointments() {
                         <UserOutlined />Patient: <span className="font-mono text-xs">{appt.patientId}</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <CalendarOutlined />{dayjs(appt.scheduledAt).format('DD MMM YYYY')}
+                        <CalendarOutlined />{dayjs.utc(appt.scheduledAt).format('DD MMM YYYY')}
                       </span>
                       <span className="flex items-center gap-1">
-                        <ClockCircleOutlined />{dayjs(appt.scheduledAt).format('h:mm A')}
+                        <ClockCircleOutlined />{dayjs.utc(appt.scheduledAt).format('h:mm A')}
                       </span>
                       <span className="flex items-center gap-1">
                         {appt.type === 'video' ? <VideoCameraOutlined /> : <UserOutlined />}
