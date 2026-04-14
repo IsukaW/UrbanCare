@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Card, Typography, Button, Tag, Select, Spin, Empty,
-  Modal, List, Tooltip, Input, Progress,
+  Modal, List, Tooltip, Input, Progress, Pagination,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
@@ -24,6 +24,7 @@ import useAuthStore from '../../store/authStore';
 import VideoCall from '../../components/VideoCall';
 
 const { Title, Text } = Typography;
+const SLOT_PAGE_SIZE = 3;
 
 // ── Slot status helpers ───────────────────────────────────────────────────────
 const SLOT_STATUS_CFG = {
@@ -66,6 +67,10 @@ export default function DoctorAppointments() {
   const [search, setSearch]             = useState('');
   const [filterPayment, setFilterPayment] = useState('');
   const [filterStatus, setFilterStatus]   = useState('');
+
+  // Slot pagination
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [pastPage, setPastPage] = useState(1);
 
   // Modals
   const [videoAppt, setVideoAppt]                       = useState(null);
@@ -158,6 +163,17 @@ export default function DoctorAppointments() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    setUpcomingPage(1);
+    setPastPage(1);
+  }, [slots.length]);
+
+  const today    = dayjs().format('YYYY-MM-DD');
+  const upcoming = slots.filter((s) => s.date >= today);
+  const past     = slots.filter((s) => s.date <  today);
+  const upcomingPageData = upcoming.slice((upcomingPage - 1) * SLOT_PAGE_SIZE, upcomingPage * SLOT_PAGE_SIZE);
+  const pastPageData = past.slice((pastPage - 1) * SLOT_PAGE_SIZE, pastPage * SLOT_PAGE_SIZE);
+
   // ── Docs modal ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!recordsAppt) { setLinkedDocs([]); setRecordsPatientProfileId(null); return; }
@@ -208,7 +224,19 @@ export default function DoctorAppointments() {
   return (
     <div className="p-4 sm:p-6">
       {view === 'slots' ? (
-        <SlotOverview slots={slots} onRefresh={load} onOpen={openSlot} />
+        <SlotOverview
+          slots={slots}
+          upcoming={upcoming}
+          past={past}
+          upcomingPage={upcomingPage}
+          pastPage={pastPage}
+          upcomingPageData={upcomingPageData}
+          pastPageData={pastPageData}
+          onChangeUpcomingPage={setUpcomingPage}
+          onChangePastPage={setPastPage}
+          onRefresh={load}
+          onOpen={openSlot}
+        />
       ) : (
         <DetailView
           slot={selectedSlot}
@@ -286,11 +314,19 @@ export default function DoctorAppointments() {
 }
 
 // ── Slot Overview ─────────────────────────────────────────────────────────────
-function SlotOverview({ slots, onRefresh, onOpen }) {
-  const today    = dayjs().format('YYYY-MM-DD');
-  const upcoming = slots.filter((s) => s.date >= today);
-  const past     = slots.filter((s) => s.date <  today);
-
+function SlotOverview({
+  slots,
+  upcoming,
+  past,
+  upcomingPage,
+  pastPage,
+  upcomingPageData,
+  pastPageData,
+  onChangeUpcomingPage,
+  onChangePastPage,
+  onRefresh,
+  onOpen,
+}) {
   const totalBooked = slots.reduce((sum, s) => sum + s.bookedTokens, 0);
 
   return (
@@ -340,8 +376,19 @@ function SlotOverview({ slots, onRefresh, onOpen }) {
                 <Text strong className="text-xs uppercase tracking-widest text-gray-500">Upcoming Slots</Text>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {upcoming.map((slot) => <SlotCard key={slot.slotId} slot={slot} onOpen={onOpen} />)}
+                {upcomingPageData.map((slot) => <SlotCard key={slot.slotId} slot={slot} onOpen={onOpen} />)}
               </div>
+              {upcoming.length > SLOT_PAGE_SIZE && (
+                <div className="mt-5 flex justify-center">
+                  <Pagination
+                    current={upcomingPage}
+                    pageSize={SLOT_PAGE_SIZE}
+                    total={upcoming.length}
+                    showSizeChanger={false}
+                    onChange={onChangeUpcomingPage}
+                  />
+                </div>
+              )}
             </section>
           )}
 
@@ -353,8 +400,19 @@ function SlotOverview({ slots, onRefresh, onOpen }) {
                 <Text strong className="text-xs uppercase tracking-widest text-gray-400">Past Slots</Text>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 opacity-70">
-                {past.map((slot) => <SlotCard key={slot.slotId} slot={slot} onOpen={onOpen} />)}
+                {pastPageData.map((slot) => <SlotCard key={slot.slotId} slot={slot} onOpen={onOpen} />)}
               </div>
+              {past.length > SLOT_PAGE_SIZE && (
+                <div className="mt-5 flex justify-center">
+                  <Pagination
+                    current={pastPage}
+                    pageSize={SLOT_PAGE_SIZE}
+                    total={past.length}
+                    showSizeChanger={false}
+                    onChange={onChangePastPage}
+                  />
+                </div>
+              )}
             </section>
           )}
         </>

@@ -100,7 +100,7 @@ const canAccessAppointment = (user, appointment) =>
 
 const generateTokenNumber = (weekStartMonday, tokenCount) => {
   const weekStr = weekStartMonday.replace(/-/g, '');
-  const tokenStr = String(tokenCount || 1).padStart(3, '0');
+  const tokenStr = String(tokenCount || 1).padStart(2, '0');
   return `UC-${weekStr}-${tokenStr}`;
 };
 
@@ -316,7 +316,17 @@ const bookAppointment = asyncHandler(async (req, res) => {
       console.warn('Patient profile not found in patient-service:', error.message);
     }
 
-    // 3. Verify slot is available and auto-derive scheduledAt from slot details
+    // 3. Prevent duplicate patient booking for the same slot
+    const existingAppointment = await Appointment.findOne({
+      patientId: value.patientId,
+      slotId: value.slotId,
+      status: { $ne: 'cancelled' }
+    });
+    if (existingAppointment) {
+      throw new ApiError(StatusCodes.CONFLICT, 'You already have an appointment booked for this slot');
+    }
+
+    // 4. Verify slot is available and auto-derive scheduledAt from slot details
     let weekStartMonday;
     let slotDate;
     let slotStartTime;
