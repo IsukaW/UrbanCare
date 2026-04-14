@@ -295,9 +295,6 @@ export default function AdminAppointments() {
           <Form.Item name="status" label="Status" rules={[{ required: true }]}>
             <Select options={STATUS_OPTIONS} />
           </Form.Item>
-          <Form.Item name="reason" label="Reason">
-            <Input.TextArea rows={3} />
-          </Form.Item>
           <div className="flex justify-end gap-2">
             <Button onClick={() => setEditAppt(null)}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={saving}>Save</Button>
