@@ -1,11 +1,124 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Card, Typography, Tag, Button, Modal, Descriptions, Space, Tooltip, Popconfirm, Avatar, Spin } from 'antd';
 import { notify } from '../../utils/notify';
-import { EyeOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
+import { EyeOutlined, DeleteOutlined, UserOutlined, CalendarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { documentService } from '../../services/common/document.service';
+import {
+  mondayOfWeekContaining,
+  formatWeekStartMonday,
+  addDays,
+  getSlotsForWeek,
+} from '../../utils/doctorScheduleWeek';
+import { slotsFromProfileForUi } from '../../utils/doctorScheduleSchema';
 
 const { Title } = Typography;
+
+const SLOT_STARTS = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function endFromStart(start) {
+  const [h, m] = start.split(':').map(Number);
+  return `${pad2(h + 2)}:${pad2(m)}`;
+}
+function slotKey(dayOfWeek, startTime, endTime) {
+  return `${dayOfWeek}_${startTime}_${endTime}`;
+}
+
+/** Returns "X days this week" count for a doctor profile. */
+function thisWeekAvailabilityDays(profile) {
+  const monday = mondayOfWeekContaining(new Date());
+  const raw = getSlotsForWeek(profile, monday);
+  const slots = slotsFromProfileForUi(raw);
+  return new Set(slots.map((s) => s.dayOfWeek)).size;
+}
+
+/** Read-only calendar view of a doctor's weekly schedule. */
+function ScheduleCalendarView({ profile }) {
+  const [weekStart, setWeekStart] = useState(() => mondayOfWeekContaining(new Date()));
+
+  const mon = weekStart;
+  const sun = addDays(mon, 6);
+  const raw = getSlotsForWeek(profile, mon);
+  const slots = slotsFromProfileForUi(raw);
+  const scheduleKeys = new Set(slots.map((s) => slotKey(s.dayOfWeek, s.startTime, s.endTime)));
+  const weekKey = mon.getTime();
+  const weekLabel = `${mon.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} – ${sun.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const thisWeekMonday = mondayOfWeekContaining(new Date());
+  const isCurrentWeek = mon.getTime() === thisWeekMonday.getTime();
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <span className="font-medium text-slate-700 text-sm">{weekLabel}</span>
+        <Space size="small" wrap>
+          <Button size="small" icon={<LeftOutlined />} onClick={() => setWeekStart((d) => addDays(d, -7))} aria-label="Previous week" />
+          <Button size="small" icon={<RightOutlined />} onClick={() => setWeekStart((d) => addDays(d, 7))} aria-label="Next week" />
+          <Button size="small" type={isCurrentWeek ? 'default' : 'primary'} onClick={() => setWeekStart(mondayOfWeekContaining(new Date()))}>
+            This week
+          </Button>
+        </Space>
+      </div>
+
+      <div className="overflow-x-auto">
+        <div
+          key={weekKey}
+          className="grid gap-1 min-w-[520px]"
+          style={{ gridTemplateColumns: '52px repeat(7, minmax(0, 1fr))' }}
+        >
+          <div />
+          {Array.from({ length: 7 }, (_, c) => {
+            const dayDate = addDays(mon, c);
+            return (
+              <div key={`h-${weekKey}-${c}`} className="text-center pb-2 border-b border-slate-100">
+                <div className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">
+                  {dayDate.toLocaleDateString(undefined, { weekday: 'short' })}
+                </div>
+                <div className="text-sm font-semibold text-slate-800">{dayDate.getDate()}</div>
+              </div>
+            );
+          })}
+
+          {SLOT_STARTS.map((start) => {
+            const end = endFromStart(start);
+            return (
+              <React.Fragment key={`${weekKey}-${start}`}>
+                <div className="text-[10px] text-slate-500 flex items-center justify-end pr-1 text-right leading-tight">
+                  {start}<br />{end}
+                </div>
+                {Array.from({ length: 7 }, (_, c) => {
+                  const cellDate = addDays(mon, c);
+                  const dow = cellDate.getDay();
+                  const key = slotKey(dow, start, end);
+                  const on = scheduleKeys.has(key);
+                  return (
+                    <div
+                      key={`${weekKey}-${c}-${start}`}
+                      className={[
+                        'min-h-9 rounded-md border',
+                        on ? 'bg-blue-500 border-blue-700' : 'bg-slate-50 border-slate-200',
+                      ].join(' ')}
+                      title={on ? `${cellDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · ${start}–${end} (Available)` : undefined}
+                    />
+                  );
+                })}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-blue-500 border border-blue-700 inline-block" /> Available
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-slate-100 border border-slate-200 inline-block" /> Unavailable
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDoctors() {
   const [doctors, setDoctors] = useState([]);
@@ -15,6 +128,7 @@ export default function AdminDoctors() {
   const [deletingId, setDeletingId] = useState(null);
   const [detailPhotoUrl, setDetailPhotoUrl] = useState(null);
   const [detailPhotoLoading, setDetailPhotoLoading] = useState(false);
+  const [schedModalOpen, setSchedModalOpen] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -87,13 +201,9 @@ export default function AdminDoctors() {
   };
 
   const scheduleSummary = (r) => {
-    const weeks = r.weeklyAvailability;
-    if (weeks?.length) {
-      const slots = weeks.reduce((a, w) => a + (w.slots?.length ?? 0), 0);
-      return `${weeks.length} week(s), ${slots} slot(s)`;
-    }
-    if (r.schedule?.length) return `${r.schedule.length} slot(s) (legacy)`;
-    return '—';
+    const days = thisWeekAvailabilityDays(r);
+    if (days === 0) return 'No availability this week';
+    return `${days} day${days !== 1 ? 's' : ''} this week`;
   };
 
   const columns = [
@@ -246,10 +356,34 @@ export default function AdminDoctors() {
                   '—'
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="Availability">{scheduleSummary(selected)}</Descriptions.Item>
+              <Descriptions.Item label="Availability">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-transparent border-0 p-0 text-sm"
+                  onClick={() => setSchedModalOpen(true)}
+                >
+                  <CalendarOutlined />
+                  {scheduleSummary(selected)}
+                </button>
+              </Descriptions.Item>
             </Descriptions>
           </>
         )}
+      </Modal>
+
+      <Modal
+        title={selected ? `${selected.fullName} — Weekly Schedule` : 'Schedule'}
+        open={schedModalOpen}
+        onCancel={() => setSchedModalOpen(false)}
+        footer={
+          <Button type="primary" onClick={() => setSchedModalOpen(false)}>
+            Close
+          </Button>
+        }
+        width={680}
+        destroyOnClose
+      >
+        {selected && <ScheduleCalendarView profile={selected} />}
       </Modal>
     </div>
   );

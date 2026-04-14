@@ -7,7 +7,9 @@ import {
   HeartOutlined,
 } from '@ant-design/icons';
 import { doctorService } from '../../services/doctor/doctor.service';
-import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
+import { appointmentService } from '../../services/appointment/appointment.service';
+import { userService } from '../../services/common/user.service';
+import { ROLES, ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
 import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
@@ -40,6 +42,10 @@ const StatCard = ({ title, value, icon, color, loading }) => (
 export default function AdminDashboard() {
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [appointmentCount, setAppointmentCount] = useState(null);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
   useEffect(() => {
     doctorService
@@ -47,6 +53,20 @@ export default function AdminDashboard() {
       .then(setDoctors)
       .catch((e) => notify.error('Failed to load doctors', e.message))
       .finally(() => setLoadingDoctors(false));
+
+    appointmentService
+      .list({ limit: 1 })
+      .then(({ pagination, appointments }) => {
+        setAppointmentCount(pagination?.total ?? appointments?.length ?? 0);
+      })
+      .catch((e) => notify.error('Failed to load appointments', e.message))
+      .finally(() => setLoadingAppointments(false));
+
+    userService
+      .listAll()
+      .then(setUsers)
+      .catch((e) => notify.error('Failed to load users', e.message))
+      .finally(() => setLoadingUsers(false));
   }, []);
 
   const doctorColumns = [
@@ -93,18 +113,31 @@ export default function AdminDashboard() {
           />
         </Col>
         <Col xs={24} sm={12} xl={6}>
-          <StatCard title="Patients" value="–" icon={<HeartOutlined />} color="#52c41a" />
+          <StatCard
+            title="Patients"
+            value={loadingUsers ? '–' : users.filter((u) => u.role === ROLES.PATIENT).length}
+            icon={<HeartOutlined />}
+            color="#52c41a"
+            loading={loadingUsers}
+          />
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <StatCard
             title="Appointments"
-            value="–"
+            value={loadingAppointments ? '–' : appointmentCount ?? '–'}
             icon={<CalendarOutlined />}
             color="#faad14"
+            loading={loadingAppointments}
           />
         </Col>
         <Col xs={24} sm={12} xl={6}>
-          <StatCard title="Users" value="–" icon={<UserOutlined />} color="#722ed1" />
+          <StatCard
+            title="Users"
+            value={loadingUsers ? '–' : users.length}
+            icon={<UserOutlined />}
+            color="#722ed1"
+            loading={loadingUsers}
+          />
         </Col>
       </Row>
 
