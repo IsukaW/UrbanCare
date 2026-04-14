@@ -16,7 +16,8 @@ const updateSchema = Joi.object({
   fullName: Joi.string().min(2).max(120).optional(),
   dateOfBirth: Joi.date().iso().optional(),
   bloodType: Joi.string().max(4).allow('', null).optional(),
-  allergies: Joi.array().items(Joi.string().max(120)).optional()
+  allergies: Joi.array().items(Joi.string().max(120)).optional(),
+  profilePhotoDocumentId: Joi.string().trim().allow(null, '').optional()
 }).min(1);
 
 const historySchema = Joi.object({

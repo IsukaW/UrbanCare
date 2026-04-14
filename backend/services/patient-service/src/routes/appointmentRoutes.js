@@ -5,7 +5,8 @@ const {
   getAppointment,
   cancelAppointment,
   confirmPayment,
-  updateAppt
+  updateAppt,
+  approveCancellationAppt
 } = require('../controllers/appointmentController');
 const { authenticate } = require('../middleware/auth');
 const { authorize } = require('../middleware/authorize');
@@ -19,6 +20,7 @@ router.post('/', authenticate, authorize('admin', 'patient'), createAppointment)
 router.get('/', authenticate, authorize('admin', 'doctor', 'patient'), listMyAppointments);
 router.get('/:id', authenticate, authorize('admin', 'doctor', 'patient'), getAppointment);
 router.post('/:id/cancel', authenticate, authorize('admin', 'patient'), cancelAppointment);
+router.put('/:id/approve-cancellation', authenticate, authorize('admin'), approveCancellationAppt);
 router.post('/:id/confirm-payment', authenticate, authorize('admin', 'patient'), confirmPayment);
 router.put('/:id', authenticate, authorize('admin', 'doctor', 'patient'), updateAppt);
 

@@ -23,7 +23,7 @@ async function bookAppointment({ body, authorization }) {
   }
 }
 
-async function getPatientAppointments({ patientId, doctorId, paymentStatus, status, page, limit, authorization }) {
+async function getPatientAppointments({ patientId, doctorId, paymentStatus, status, page, limit, fromDate, sort, authorization }) {
   try {
     const params = {};
     if (patientId)     params.patientId     = patientId;
@@ -32,6 +32,8 @@ async function getPatientAppointments({ patientId, doctorId, paymentStatus, stat
     if (status) params.status = status;
     if (page)   params.page  = page;
     if (limit)  params.limit = limit;
+    if (fromDate) params.fromDate = fromDate;
+    if (sort)     params.sort    = sort;
     const { data } = await client.get('/appointments', {
       headers: { Authorization: authorization },
       params
@@ -119,11 +121,30 @@ async function updateAppointment({ appointmentId, body, authorization }) {
   }
 }
 
+async function approveCancellation({ appointmentId, adminNotes, authorization }) {
+  try {
+    const { data } = await client.put(
+      `/appointments/${appointmentId}/approve-cancellation`,
+      { approvalStatus: 'approve_cancellation', adminNotes: adminNotes || '' },
+      { headers: { Authorization: authorization } }
+    );
+    return data;
+  } catch (error) {
+    logger.error({ err: error }, `Failed to approve cancellation for appointment ${appointmentId}`);
+    const status = error.response?.status;
+    const msg = error.response?.data?.message || error.message;
+    const err = new Error(msg);
+    err.statusCode = status;
+    throw err;
+  }
+}
+
 module.exports = {
   bookAppointment,
   getPatientAppointments,
   getAppointmentById,
   requestCancellation,
   confirmPaymentForAppointment,
-  updateAppointment
+  updateAppointment,
+  approveCancellation
 };
