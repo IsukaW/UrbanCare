@@ -96,6 +96,7 @@ const listMyAppointments = asyncHandler(async (req, res) => {
       page,
       limit,
       fromDate: req.query.fromDate,
+      toDate:   req.query.toDate,
       sort: req.query.sort,
       authorization: req.headers.authorization
     });

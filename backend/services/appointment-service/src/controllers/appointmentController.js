@@ -88,6 +88,7 @@ const listAppointmentSchema = Joi.object({
     .optional(),
   paymentStatus: Joi.string().valid('pending', 'paid', 'failed').optional(),
   fromDate: Joi.date().iso().optional(),
+  toDate: Joi.date().iso().optional(),
   sort: Joi.string().valid('asc', 'desc').default('desc'),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
@@ -569,6 +570,10 @@ const listAppointments = asyncHandler(async (req, res) => {
 
   if (value.fromDate) {
     query.scheduledAt = { ...query.scheduledAt, $gte: value.fromDate };
+  }
+
+  if (value.toDate) {
+    query.scheduledAt = { ...query.scheduledAt, $lt: value.toDate };
   }
 
   const { page, limit } = value;

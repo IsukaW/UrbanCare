@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Typography, Button, Tag, Select, Spin, Empty, Modal, Form, Input, Pagination,
+  Card, Typography, Button, Tag, Select, Spin, Empty, Modal, Form, Input, Pagination, DatePicker,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
@@ -25,6 +25,7 @@ export default function AdminAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [dateRange, setDateRange]       = useState(null);
   const [editAppt, setEditAppt]         = useState(null);
   const [saving, setSaving]             = useState(false);
   const [approvingId, setApprovingId]   = useState(null);
@@ -37,14 +38,15 @@ export default function AdminAppointments() {
   const [total, setTotal]               = useState(0);
   const PAGE_SIZE = 10;
 
-  const load = async (status = statusFilter, currentPage = page) => {
+  const load = async (status = statusFilter, currentPage = page, range = dateRange) => {
     setLoading(true);
     try {
+      const params = { page: currentPage, limit: PAGE_SIZE };
+      if (status) params.status = status;
+      if (range?.[0]) params.fromDate = range[0].format('YYYY-MM-DD');
+      if (range?.[1]) params.toDate   = range[1].add(1, 'day').format('YYYY-MM-DD');
       const { appointments: list, pagination } = await appointmentService.list(
-        Object.fromEntries(
-          Object.entries({ ...(status ? { status } : {}), page: currentPage, limit: PAGE_SIZE })
-            .filter(([, v]) => v)
-        )
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v != null))
       );
       setAppointments(list);
       if (pagination) setTotal(pagination.total);
@@ -116,12 +118,18 @@ export default function AdminAppointments() {
   const handleFilterChange = (val) => {
     setStatusFilter(val);
     setPage(1);
-    load(val, 1);
+    load(val, 1, dateRange);
+  };
+
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    setPage(1);
+    load(statusFilter, 1, range);
   };
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
-    load(statusFilter, newPage);
+    load(statusFilter, newPage, dateRange);
   };
 
   return (
@@ -133,7 +141,7 @@ export default function AdminAppointments() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+      <div className="mb-4 flex flex-col sm:flex-row gap-3 flex-wrap">
         <Select
           allowClear
           placeholder="Filter by status"
@@ -141,6 +149,14 @@ export default function AdminAppointments() {
           onChange={handleFilterChange}
           className="w-full sm:w-56"
           options={STATUS_OPTIONS}
+        />
+        <DatePicker.RangePicker
+          allowClear
+          placeholder={['From date', 'To date']}
+          value={dateRange}
+          onChange={handleDateRangeChange}
+          className="w-full sm:w-72"
+          format="DD MMM YYYY"
         />
         <Button icon={<ReloadOutlined />} onClick={() => load()}>Refresh</Button>
         <Text type="secondary" className="sm:ml-auto">
