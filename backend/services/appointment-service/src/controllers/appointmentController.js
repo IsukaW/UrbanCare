@@ -68,7 +68,7 @@ const requestCancellationSchema = Joi.object({
 
 const approveCancellationSchema = Joi.object({
   approvalStatus: Joi.string().valid('approve_cancellation', 'offer_reschedule').required(),
-  adminNotes: Joi.string().max(500).optional(),
+  adminNotes: Joi.string().max(500).allow('').optional(),
   // For reschedule offer - only slotId needed, date auto-derived from slot
   alternativeSlotId: Joi.string().when('approvalStatus', { is: 'offer_reschedule', then: Joi.required() }),
   alternativeDoctorId: Joi.string().when('approvalStatus', { is: 'offer_reschedule', then: Joi.optional() })
@@ -87,6 +87,8 @@ const listAppointmentSchema = Joi.object({
     .valid('pending', 'confirmed', 'completed', 'cancelled', 'cancellation_requested', 'rescheduled')
     .optional(),
   paymentStatus: Joi.string().valid('pending', 'paid', 'failed').optional(),
+  fromDate: Joi.date().iso().optional(),
+  sort: Joi.string().valid('asc', 'desc').default('desc'),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
 });
@@ -555,11 +557,16 @@ const listAppointments = asyncHandler(async (req, res) => {
     query.paymentStatus = value.paymentStatus;
   }
 
+  if (value.fromDate) {
+    query.scheduledAt = { ...query.scheduledAt, $gte: value.fromDate };
+  }
+
   const { page, limit } = value;
   const skip = (page - 1) * limit;
+  const sortOrder = value.sort === 'asc' ? 1 : -1;
 
   const [appointments, total] = await Promise.all([
-    Appointment.find(query).sort({ scheduledAt: -1 }).skip(skip).limit(limit).lean(),
+    Appointment.find(query).sort({ scheduledAt: sortOrder }).skip(skip).limit(limit).lean(),
     Appointment.countDocuments(query),
   ]);
 

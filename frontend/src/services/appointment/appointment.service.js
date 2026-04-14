@@ -56,4 +56,9 @@ export const appointmentService = {
     const { data } = await appointmentApi.update(id, payload);
     return data.appointment ?? data;
   },
+
+  async approveCancellation(id, adminNotes) {
+    const { data } = await appointmentApi.approveCancellation(id, adminNotes);
+    return data.appointment ?? data;
+  },
 };

@@ -8,7 +8,8 @@ const {
   getAppointmentById,
   requestCancellation,
   confirmPaymentForAppointment,
-  updateAppointment
+  updateAppointment,
+  approveCancellation
 } = require('../services/appointmentClient');
 const { getDoctorProfileByUserId } = require('../services/doctorClient');
 
@@ -94,6 +95,8 @@ const listMyAppointments = asyncHandler(async (req, res) => {
       status,
       page,
       limit,
+      fromDate: req.query.fromDate,
+      sort: req.query.sort,
       authorization: req.headers.authorization
     });
     return res.status(StatusCodes.OK).json(result);
@@ -161,6 +164,24 @@ const updateAppt = asyncHandler(async (req, res) => {
   }
 });
 
+const approveCancellationAppt = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Only admins can approve cancellations');
+  }
+  const { id } = req.params;
+  try {
+    const result = await approveCancellation({
+      appointmentId: id,
+      adminNotes: req.body?.adminNotes,
+      authorization: req.headers.authorization
+    });
+    return res.status(StatusCodes.OK).json(result);
+  } catch (err) {
+    const code = err.statusCode || StatusCodes.BAD_GATEWAY;
+    throw new ApiError(code, err.message);
+  }
+});
+
 const confirmPayment = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { paymentIntentId } = req.body || {};
@@ -182,4 +203,5 @@ const confirmPayment = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { createAppointment, listMyAppointments, getAppointment, cancelAppointment, confirmPayment, updateAppt };
+module.exports = { createAppointment, listMyAppointments, getAppointment, cancelAppointment, confirmPayment, updateAppt, approveCancellationAppt };
+

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Typography, Button, Tag, Select, Spin, Empty, Popconfirm, Badge, Tooltip, Pagination,
-  Modal, List,
+  Card, Typography, Button, Tag, Select, Spin, Empty, Badge, Tooltip, Pagination,
+  Modal, List, Input,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
@@ -29,12 +29,18 @@ const { Title, Text } = Typography;
 
 const CANCELLABLE = [APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.PENDING];
 
+// ── helpers ──────────────────────────────────────────────────────────────────
+const todayIso = () => new Date().toISOString().split('T')[0];
+
 export default function PatientAppointments() {
   const user = useAuthStore((s) => s.user);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading]           = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [cancelling, setCancelling]     = useState(null);
+  // null = default view (confirmed + from today), otherwise the selected status
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null); // appt being cancelled
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling]     = useState(false);
   const [videoAppt, setVideoAppt]       = useState(null);
   const [payingAppt, setPayingAppt]     = useState(null);
   const [page, setPage]                 = useState(1);
@@ -50,11 +56,17 @@ export default function PatientAppointments() {
   const load = async (status = statusFilter, currentPage = page) => {
     setLoading(true);
     try {
+      const params = { page: currentPage, limit: PAGE_SIZE, sort: 'asc' };
+      if (status) {
+        params.status = status;
+        // When user explicitly filters, show all dates
+      } else {
+        // Default view: confirmed appointments from today onwards
+        params.status   = APPOINTMENT_STATUS.CONFIRMED;
+        params.fromDate = todayIso();
+      }
       const { appointments: list, pagination } = await appointmentService.list(
-        Object.fromEntries(
-          Object.entries({ ...(status ? { status } : {}), page: currentPage, limit: PAGE_SIZE })
-            .filter(([, v]) => v)
-        )
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v != null))
       );
       setAppointments(list);
       if (pagination) setTotal(pagination.total);
@@ -91,18 +103,24 @@ export default function PatientAppointments() {
       .finally(() => setDocsLoading(false));
   }, [docsAppt]);
 
-  const handleCancel = async (appt) => {
-    setCancelling(appt._id);
+  const handleCancel = async () => {
+    if (!cancelTarget || !cancelReason.trim()) return;
+    setCancelling(true);
     try {
-      await appointmentService.cancel(appt._id, 'Cancelled by patient');
-      notify.success('Appointment cancelled');
+      await appointmentService.cancel(cancelTarget._id, cancelReason.trim());
+      notify.success('Cancellation requested', 'An admin will review your request.');
       setAppointments((prev) =>
-        prev.map((a) => a._id === appt._id ? { ...a, status: 'cancelled' } : a)
+        prev.map((a) => a._id === cancelTarget._id
+          ? { ...a, status: APPOINTMENT_STATUS.CANCELLATION_REQUESTED }
+          : a
+        )
       );
+      setCancelTarget(null);
+      setCancelReason('');
     } catch (e) {
       notify.error('Cancel failed', e.message);
     } finally {
-      setCancelling(null);
+      setCancelling(false);
     }
   };
 
@@ -115,9 +133,11 @@ export default function PatientAppointments() {
   };
 
   const handleFilterChange = (val) => {
-    setStatusFilter(val);
+    // val is undefined when the Select is cleared ("All / upcoming")
+    const next = val || null;
+    setStatusFilter(next);
     setPage(1);
-    load(val, 1);
+    load(next, 1);
   };
 
   const handlePageChange = (newPage) => {
@@ -142,10 +162,10 @@ export default function PatientAppointments() {
       <div className="mb-4 flex flex-col sm:flex-row gap-3">
         <Select
           allowClear
-          placeholder="Filter by status"
+          placeholder="Upcoming confirmed (default)"
           value={statusFilter || undefined}
           onChange={handleFilterChange}
-          className="w-full sm:w-56"
+          className="w-full sm:w-64"
           options={Object.values(APPOINTMENT_STATUS).map((s) => ({
             value: s,
             label: APPOINTMENT_STATUS_LABELS[s],
@@ -175,7 +195,7 @@ export default function PatientAppointments() {
             <AppointmentCard
               key={appt._id}
               appt={appt}
-              onCancel={handleCancel}
+              onRequestCancel={(a) => { setCancelTarget(a); setCancelReason(''); }}
               cancelling={cancelling}
               onVideoCall={() => setVideoAppt(appt)}
               onPayNow={() => setPayingAppt(appt)}
@@ -204,6 +224,39 @@ export default function PatientAppointments() {
           />
         </div>
       )}
+
+      {/* Cancel reason modal */}
+      <Modal
+        title="Request Cancellation"
+        open={!!cancelTarget}
+        onCancel={() => { setCancelTarget(null); setCancelReason(''); }}
+        footer={[
+          <Button key="back" disabled={cancelling} onClick={() => { setCancelTarget(null); setCancelReason(''); }}>Back</Button>,
+          <Button
+            key="submit"
+            type="primary"
+            danger
+            loading={cancelling}
+            disabled={!cancelReason.trim()}
+            onClick={handleCancel}
+          >
+            Submit Request
+          </Button>,
+        ]}
+        destroyOnClose
+      >
+        <p className="text-gray-600 mb-3">
+          Your cancellation request will be reviewed by an admin. Please provide a reason below.
+        </p>
+        <Input.TextArea
+          rows={4}
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          placeholder="e.g. Schedule conflict, feeling better, need to reschedule — please describe your reason for cancellation."
+          maxLength={500}
+          showCount
+        />
+      </Modal>
 
       {/* Video call overlay */}
       {videoAppt && (
@@ -298,7 +351,7 @@ export default function PatientAppointments() {
 }
 
 function AppointmentCard({
-  appt, onCancel, cancelling,
+  appt, onRequestCancel, cancelling,
   onVideoCall, onPayNow, onViewDocs,
   patientProfileId, expanded, onToggleExpand,
 }) {
@@ -391,29 +444,20 @@ function AppointmentCard({
               </Tooltip>
             )}
             {isCancellable && (
-              <Popconfirm
-                title="Cancel this appointment?"
-                description="This action cannot be undone."
-                onConfirm={() => onCancel(appt)}
-                okText="Yes, cancel"
-                okType="danger"
+              <Button
+                danger
+                size="small"
+                icon={<CloseCircleOutlined />}
+                onClick={() => onRequestCancel(appt)}
               >
-                <Button
-                  danger
-                  size="small"
-                  icon={<CloseCircleOutlined />}
-                  loading={cancelling === appt._id}
-                >
-                  Cancel
-                </Button>
-              </Popconfirm>
+                Cancel
+              </Button>
             )}
           </div>
 
           {/* Right: consultation toggle (all completed appointments) */}
           {isCompleted && (
             <Button
-              size="small"
               type={expanded ? 'primary' : 'default'}
               ghost={expanded}
               icon={expanded ? <UpOutlined /> : <FileDoneOutlined />}

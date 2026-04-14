@@ -4,10 +4,11 @@ import {
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
-  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined, EditOutlined,
+  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined, EditOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import { notify } from '../../utils/notify';
 import { appointmentService } from '../../services/appointment/appointment.service';
+import { userService } from '../../services/common/user.service';
 import {
   APPOINTMENT_STATUS, APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS,
 } from '../../constants/appointment';
@@ -26,6 +27,11 @@ export default function AdminAppointments() {
   const [statusFilter, setStatusFilter] = useState('');
   const [editAppt, setEditAppt]         = useState(null);
   const [saving, setSaving]             = useState(false);
+  const [approvingId, setApprovingId]   = useState(null);
+  const [approveModal, setApproveModal] = useState(null);
+  const [approveNotes, setApproveNotes] = useState('');
+  const [approveLoading, setApproveLoading] = useState(false);
+  const [patientNames, setPatientNames] = useState({});
   const [form]                          = Form.useForm();
   const [page, setPage]                 = useState(1);
   const [total, setTotal]               = useState(0);
@@ -42,6 +48,23 @@ export default function AdminAppointments() {
       );
       setAppointments(list);
       if (pagination) setTotal(pagination.total);
+
+      // Fetch names for patients that don't have patientName stored
+      const missingIds = [...new Set(
+        list.filter((a) => !a.patientName).map((a) => a.patientId)
+      )];
+      if (missingIds.length > 0) {
+        const results = await Promise.allSettled(missingIds.map((id) => userService.getById(id)));
+        const nameMap = {};
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled') {
+            nameMap[missingIds[i]] = r.value?.fullName || r.value?.firstName
+              ? `${r.value.firstName || ''} ${r.value.lastName || ''}`.trim()
+              : null;
+          }
+        });
+        setPatientNames((prev) => ({ ...prev, ...nameMap }));
+      }
     } catch (e) {
       notify.error('Failed to load appointments', e.message);
     } finally {
@@ -69,6 +92,24 @@ export default function AdminAppointments() {
       notify.error('Update failed', e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleApproveCancellation = async () => {
+    if (!approveModal) return;
+    setApproveLoading(true);
+    try {
+      await appointmentService.approveCancellation(approveModal._id, approveNotes.trim());
+      notify.success('Cancellation approved', 'Appointment status changed to Cancelled.');
+      setAppointments((prev) =>
+        prev.map((a) => a._id === approveModal._id ? { ...a, status: APPOINTMENT_STATUS.CANCELLED } : a)
+      );
+      setApproveModal(null);
+      setApproveNotes('');
+    } catch (e) {
+      notify.error('Approval failed', e.message);
+    } finally {
+      setApproveLoading(false);
     }
   };
 
@@ -137,7 +178,10 @@ export default function AdminAppointments() {
                     <div className="text-sm text-gray-500 mb-2">{appt.doctorSpecialty}</div>
                     <div className="flex flex-wrap gap-3 text-sm text-gray-600">
                       <span className="flex items-center gap-1">
-                        <UserOutlined />Patient: <span className="font-mono text-xs">{appt.patientId}</span>
+                        <UserOutlined />
+                        {appt.patientName || patientNames[appt.patientId] || (
+                          <span className="font-mono text-xs">{appt.patientId}</span>
+                        )}
                       </span>
                       <span className="flex items-center gap-1">
                         <CalendarOutlined />{dayjs.utc(appt.scheduledAt).format('DD MMM YYYY')}
@@ -155,6 +199,11 @@ export default function AdminAppointments() {
                         <span className="font-medium text-gray-600">Reason:</span> {appt.reason}
                       </div>
                     )}
+                    {appt.status === APPOINTMENT_STATUS.CANCELLATION_REQUESTED && appt.cancellation?.reason && (
+                      <div className="mt-1 text-sm text-orange-600 max-w-full lg:max-w-lg">
+                        <span className="font-medium">Cancellation reason:</span> {appt.cancellation.reason}
+                      </div>
+                    )}
                     <div className="mt-1 text-xs text-gray-400 font-mono truncate">{appt._id}</div>
                   </div>
                 </div>
@@ -168,13 +217,26 @@ export default function AdminAppointments() {
                     {appt.paymentStatus === 'paid' && <Tag color="green">Paid</Tag>}
                     {appt.paymentStatus === 'pending' && <Tag color="orange">Unpaid</Tag>}
                   </div>
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => openEdit(appt)}
-                  >
-                    Update
-                  </Button>
+                  <div className="flex gap-2 flex-wrap">
+                    {appt.status === APPOINTMENT_STATUS.CANCELLATION_REQUESTED && (
+                      <Button
+                        size="small"
+                        type="primary"
+                        danger
+                        icon={<CheckCircleOutlined />}
+                        onClick={() => { setApproveModal(appt); setApproveNotes(''); }}
+                      >
+                        Approve Cancellation
+                      </Button>
+                    )}
+                    <Button
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => openEdit(appt)}
+                    >
+                      Update
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -196,6 +258,30 @@ export default function AdminAppointments() {
           />
         </div>
       )}
+
+      {/* Approve Cancellation modal */}
+      <Modal
+        title="Approve Cancellation"
+        open={!!approveModal}
+        onCancel={() => { setApproveModal(null); setApproveNotes(''); }}
+        onOk={handleApproveCancellation}
+        okText="Approve"
+        okButtonProps={{ danger: true, loading: approveLoading }}
+        cancelButtonProps={{ disabled: approveLoading }}
+        destroyOnClose
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          The appointment status will be changed to <strong>Cancelled</strong>. You may optionally add a note for the patient.
+        </p>
+        <Input.TextArea
+          rows={3}
+          placeholder="Admin notes (optional) — e.g. Approved as per patient request"
+          value={approveNotes}
+          onChange={(e) => setApproveNotes(e.target.value)}
+          maxLength={500}
+          showCount
+        />
+      </Modal>
 
       {/* Edit modal */}
       <Modal
