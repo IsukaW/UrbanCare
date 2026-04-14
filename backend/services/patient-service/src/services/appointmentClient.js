@@ -23,7 +23,7 @@ async function bookAppointment({ body, authorization }) {
   }
 }
 
-async function getPatientAppointments({ patientId, doctorId, paymentStatus, status, page, limit, fromDate, sort, authorization }) {
+async function getPatientAppointments({ patientId, doctorId, paymentStatus, status, page, limit, fromDate, toDate, sort, authorization }) {
   try {
     const params = {};
     if (patientId)     params.patientId     = patientId;
@@ -33,6 +33,7 @@ async function getPatientAppointments({ patientId, doctorId, paymentStatus, stat
     if (page)   params.page  = page;
     if (limit)  params.limit = limit;
     if (fromDate) params.fromDate = fromDate;
+    if (toDate)   params.toDate   = toDate;
     if (sort)     params.sort    = sort;
     const { data } = await client.get('/appointments', {
       headers: { Authorization: authorization },
