@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Card, Typography, Button, Tag, Select, Spin, Empty, Badge, Tooltip, Pagination,
-  Modal, List, Input,
+  Modal, List, Input, DatePicker,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
@@ -38,6 +38,7 @@ export default function PatientAppointments() {
   const [loading, setLoading]           = useState(true);
   // null = default view (confirmed + from today), otherwise the selected status
   const [statusFilter, setStatusFilter] = useState(null);
+  const [dateFilter, setDateFilter]     = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null); // appt being cancelled
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling]     = useState(false);
@@ -53,13 +54,17 @@ export default function PatientAppointments() {
   const [patientProfileId, setPatientProfileId] = useState(null);
   const PAGE_SIZE = 10;
 
-  const load = async (status = statusFilter, currentPage = page) => {
+  const load = async (status = statusFilter, currentPage = page, range = dateFilter) => {
     setLoading(true);
     try {
       const params = { page: currentPage, limit: PAGE_SIZE, sort: 'asc' };
-      if (status) {
+      if (range?.[0] && range?.[1]) {
+        // Date range: override from+to, keep status filter or show all
+        params.fromDate = range[0].format('YYYY-MM-DD');
+        params.toDate   = range[1].add(1, 'day').format('YYYY-MM-DD');
+        if (status) params.status = status;
+      } else if (status) {
         params.status = status;
-        // When user explicitly filters, show all dates
       } else {
         // Default view: confirmed appointments from today onwards
         params.status   = APPOINTMENT_STATUS.CONFIRMED;
@@ -133,16 +138,21 @@ export default function PatientAppointments() {
   };
 
   const handleFilterChange = (val) => {
-    // val is undefined when the Select is cleared ("All / upcoming")
     const next = val || null;
     setStatusFilter(next);
     setPage(1);
-    load(next, 1);
+    load(next, 1, dateFilter);
+  };
+
+  const handleDateRangeChange = (range) => {
+    setDateFilter(range);
+    setPage(1);
+    load(statusFilter, 1, range);
   };
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
-    load(statusFilter, newPage);
+    load(statusFilter, newPage, dateFilter);
   };
 
   return (
@@ -159,7 +169,7 @@ export default function PatientAppointments() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+      <div className="mb-4 flex flex-col sm:flex-row gap-3 flex-wrap">
         <Select
           allowClear
           placeholder="Upcoming confirmed (default)"
@@ -170,6 +180,14 @@ export default function PatientAppointments() {
             value: s,
             label: APPOINTMENT_STATUS_LABELS[s],
           }))}
+        />
+        <DatePicker.RangePicker
+          allowClear
+          placeholder={['From date', 'To date']}
+          value={dateFilter}
+          onChange={handleDateRangeChange}
+          className="w-full sm:w-72"
+          format="DD MMM YYYY"
         />
         <Button icon={<ReloadOutlined />} onClick={() => load()}>Refresh</Button>
         <Text type="secondary" className="sm:ml-auto">

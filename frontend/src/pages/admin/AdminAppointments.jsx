@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Card, Typography, Button, Tag, Select, Spin, Empty, Modal, Form, Input, Pagination,
+  Card, Typography, Button, Tag, Select, Spin, Empty, Modal, Form, Input, Pagination, DatePicker,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
-  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined, EditOutlined, CheckCircleOutlined,
+  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import { notify } from '../../utils/notify';
 import { appointmentService } from '../../services/appointment/appointment.service';
@@ -25,6 +25,7 @@ export default function AdminAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [dateRange, setDateRange]       = useState(null);
   const [editAppt, setEditAppt]         = useState(null);
   const [saving, setSaving]             = useState(false);
   const [approvingId, setApprovingId]   = useState(null);
@@ -32,19 +33,19 @@ export default function AdminAppointments() {
   const [approveNotes, setApproveNotes] = useState('');
   const [approveLoading, setApproveLoading] = useState(false);
   const [patientNames, setPatientNames] = useState({});
-  const [form]                          = Form.useForm();
   const [page, setPage]                 = useState(1);
   const [total, setTotal]               = useState(0);
   const PAGE_SIZE = 10;
 
-  const load = async (status = statusFilter, currentPage = page) => {
+  const load = async (status = statusFilter, currentPage = page, range = dateRange) => {
     setLoading(true);
     try {
+      const params = { page: currentPage, limit: PAGE_SIZE };
+      if (status) params.status = status;
+      if (range?.[0]) params.fromDate = range[0].format('YYYY-MM-DD');
+      if (range?.[1]) params.toDate   = range[1].add(1, 'day').format('YYYY-MM-DD');
       const { appointments: list, pagination } = await appointmentService.list(
-        Object.fromEntries(
-          Object.entries({ ...(status ? { status } : {}), page: currentPage, limit: PAGE_SIZE })
-            .filter(([, v]) => v)
-        )
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v != null))
       );
       setAppointments(list);
       if (pagination) setTotal(pagination.total);
@@ -74,26 +75,6 @@ export default function AdminAppointments() {
 
   useEffect(() => { load(); }, []);
 
-  const openEdit = (appt) => {
-    form.setFieldsValue({ status: appt.status, reason: appt.reason });
-    setEditAppt(appt);
-  };
-
-  const handleSave = async (values) => {
-    setSaving(true);
-    try {
-      const updated = await appointmentService.update(editAppt._id, values);
-      notify.success('Appointment updated');
-      setAppointments((prev) =>
-        prev.map((a) => a._id === editAppt._id ? { ...a, ...updated } : a)
-      );
-      setEditAppt(null);
-    } catch (e) {
-      notify.error('Update failed', e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleApproveCancellation = async () => {
     if (!approveModal) return;
@@ -116,12 +97,18 @@ export default function AdminAppointments() {
   const handleFilterChange = (val) => {
     setStatusFilter(val);
     setPage(1);
-    load(val, 1);
+    load(val, 1, dateRange);
+  };
+
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    setPage(1);
+    load(statusFilter, 1, range);
   };
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
-    load(statusFilter, newPage);
+    load(statusFilter, newPage, dateRange);
   };
 
   return (
@@ -133,7 +120,7 @@ export default function AdminAppointments() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+      <div className="mb-4 flex flex-col sm:flex-row gap-3 flex-wrap">
         <Select
           allowClear
           placeholder="Filter by status"
@@ -141,6 +128,14 @@ export default function AdminAppointments() {
           onChange={handleFilterChange}
           className="w-full sm:w-56"
           options={STATUS_OPTIONS}
+        />
+        <DatePicker.RangePicker
+          allowClear
+          placeholder={['From date', 'To date']}
+          value={dateRange}
+          onChange={handleDateRangeChange}
+          className="w-full sm:w-72"
+          format="DD MMM YYYY"
         />
         <Button icon={<ReloadOutlined />} onClick={() => load()}>Refresh</Button>
         <Text type="secondary" className="sm:ml-auto">
@@ -229,13 +224,6 @@ export default function AdminAppointments() {
                         Approve Cancellation
                       </Button>
                     )}
-                    <Button
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => openEdit(appt)}
-                    >
-                      Update
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -283,24 +271,6 @@ export default function AdminAppointments() {
         />
       </Modal>
 
-      {/* Edit modal */}
-      <Modal
-        title="Update Appointment"
-        open={!!editAppt}
-        onCancel={() => setEditAppt(null)}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" onFinish={handleSave} className="mt-4">
-          <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-            <Select options={STATUS_OPTIONS} />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setEditAppt(null)}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={saving}>Save</Button>
-          </div>
-        </Form>
-      </Modal>
     </div>
   );
 }

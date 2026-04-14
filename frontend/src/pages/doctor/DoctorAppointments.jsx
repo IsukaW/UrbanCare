@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Card, Typography, Button, Tag, Select, Spin, Empty,
-  Modal, List, Tooltip, Input, Progress, Pagination,
+  Modal, List, Tooltip, Input, Progress, Pagination, DatePicker,
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
@@ -71,6 +71,7 @@ export default function DoctorAppointments() {
   // Slot pagination
   const [upcomingPage, setUpcomingPage] = useState(1);
   const [pastPage, setPastPage] = useState(1);
+  const [dateFilter, setDateFilter] = useState(null); // [dayjs, dayjs] | null
 
   // Modals
   const [videoAppt, setVideoAppt]                       = useState(null);
@@ -169,8 +170,11 @@ export default function DoctorAppointments() {
   }, [slots.length]);
 
   const today    = dayjs().format('YYYY-MM-DD');
-  const upcoming = slots.filter((s) => s.date >= today);
-  const past     = slots.filter((s) => s.date <  today);
+  const visibleSlots = dateFilter?.[0] && dateFilter?.[1]
+    ? slots.filter((s) => s.date >= dateFilter[0].format('YYYY-MM-DD') && s.date <= dateFilter[1].format('YYYY-MM-DD'))
+    : slots;
+  const upcoming = visibleSlots.filter((s) => s.date >= today);
+  const past     = visibleSlots.filter((s) => s.date <  today);
   const upcomingPageData = upcoming.slice((upcomingPage - 1) * SLOT_PAGE_SIZE, upcomingPage * SLOT_PAGE_SIZE);
   const pastPageData = past.slice((pastPage - 1) * SLOT_PAGE_SIZE, pastPage * SLOT_PAGE_SIZE);
 
@@ -225,7 +229,7 @@ export default function DoctorAppointments() {
     <div className="p-4 sm:p-6">
       {view === 'slots' ? (
         <SlotOverview
-          slots={slots}
+          slots={visibleSlots}
           upcoming={upcoming}
           past={past}
           upcomingPage={upcomingPage}
@@ -236,6 +240,8 @@ export default function DoctorAppointments() {
           onChangePastPage={setPastPage}
           onRefresh={load}
           onOpen={openSlot}
+          dateFilter={dateFilter}
+          onDateFilterChange={(d) => { setDateFilter(d); setUpcomingPage(1); setPastPage(1); }}
         />
       ) : (
         <DetailView
@@ -326,6 +332,8 @@ function SlotOverview({
   onChangePastPage,
   onRefresh,
   onOpen,
+  dateFilter,
+  onDateFilterChange,
 }) {
   const totalBooked = slots.reduce((sum, s) => sum + s.bookedTokens, 0);
 
@@ -337,7 +345,17 @@ function SlotOverview({
           <Title level={3} style={{ margin: 0 }}>My Appointments</Title>
           <Text type="secondary">Overview of your scheduled appointment slots</Text>
         </div>
-        <Button icon={<ReloadOutlined />} onClick={onRefresh}>Refresh</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <DatePicker.RangePicker
+            allowClear
+            placeholder={['From date', 'To date']}
+            value={dateFilter}
+            onChange={onDateFilterChange}
+            format="DD MMM YYYY"
+            className="w-72"
+          />
+          <Button icon={<ReloadOutlined />} onClick={onRefresh}>Refresh</Button>
+        </div>
       </div>
 
       {/* Summary stats */}
