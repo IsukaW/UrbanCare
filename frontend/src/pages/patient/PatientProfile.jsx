@@ -18,9 +18,12 @@ import {
   EditOutlined,
   HeartOutlined,
   FileTextOutlined,
+  PhoneOutlined,
+  MailOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { patientService } from '../../services/patient/patient.service';
+import { userService } from '../../services/common/user.service';
 import useAuthStore from '../../store/authStore';
 import { notify } from '../../utils/notify';
 
@@ -28,20 +31,28 @@ const { Title, Text } = Typography;
 
 export default function PatientProfile() {
   const user = useAuthStore((s) => s.user);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const token = useAuthStore((s) => s.token);
+
+  const [commonUser, setCommonUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
   const [mode, setMode] = useState('view'); // 'view' | 'create'
   const [editingProfile, setEditingProfile] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [contactForm] = Form.useForm();
   const loadSeq = useRef(0);
 
   const loadProfile = useCallback(() => {
     if (!user) {
       setLoading(false);
       setProfile(null);
+      setCommonUser(null);
       setMode('create');
       setLoadError('');
       return;
@@ -49,35 +60,42 @@ export default function PatientProfile() {
     const seq = ++loadSeq.current;
     setLoading(true);
     setLoadError('');
-    patientService
-      .getById(user.id)
-      .then((p) => {
-        if (seq !== loadSeq.current) return;
-        if (p) {
-          setProfile(p);
-          setMode('view');
-          setEditingProfile(false);
-        } else {
+
+    // Fetch both common user and patient profile in parallel
+    Promise.allSettled([
+      userService.getById(user.id),
+      patientService.getById(user.id),
+    ]).then(([userResult, patientResult]) => {
+      if (seq !== loadSeq.current) return;
+
+      // Handle common user result
+      if (userResult.status === 'fulfilled') {
+        setCommonUser(userResult.value);
+      } else {
+        // Non-fatal — fall back to the stored auth user
+        setCommonUser(null);
+      }
+
+      // Handle patient profile result
+      if (patientResult.status === 'fulfilled') {
+        setProfile(patientResult.value);
+        setMode('view');
+        setEditingProfile(false);
+      } else {
+        const err = patientResult.reason;
+        // 404 means no patient profile created yet — show create form
+        if (err?.message?.toLowerCase().includes('not found') || err?.response?.status === 404) {
           setProfile(null);
           setMode('create');
-        }
-      })
-      .catch((e) => {
-        if (seq !== loadSeq.current) return;
-        const status = e?.response?.status;
-        if (status === 404) {
-          setProfile(null);
-          setMode('create');
         } else {
-          setLoadError(e?.message || 'Could not load your patient profile.');
+          setLoadError(err?.message || 'Could not load your patient profile.');
           setProfile(null);
           setMode('view');
         }
-      })
-      .finally(() => {
-        if (seq !== loadSeq.current) return;
-        setLoading(false);
-      });
+      }
+
+      setLoading(false);
+    });
   }, [user]);
 
   useEffect(() => {
@@ -95,6 +113,15 @@ export default function PatientProfile() {
       allergies: profile.allergies?.join(', ') ?? '',
     });
   }, [profile, editingProfile, editForm]);
+
+  useEffect(() => {
+    if (!commonUser || !editingContact) return;
+    contactForm.setFieldsValue({
+      firstName: commonUser.firstName ?? '',
+      lastName: commonUser.lastName ?? '',
+      phoneNumber: commonUser.phoneNumber ?? '',
+    });
+  }, [commonUser, editingContact, contactForm]);
 
   const handleCreate = async (values) => {
     setSaving(true);
@@ -141,6 +168,28 @@ export default function PatientProfile() {
     }
   };
 
+  const handleUpdateContact = async (values) => {
+    setSavingContact(true);
+    try {
+      const updated = await userService.update(user.id, {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phoneNumber: values.phoneNumber || '',
+      });
+      setCommonUser(updated);
+      setEditingContact(false);
+      // Sync updated name back into the auth store so the navbar etc. reflects it
+      if (updated.fullName && token) {
+        setAuth(token, { ...user, fullName: updated.fullName, firstName: updated.firstName, lastName: updated.lastName });
+      }
+      notify.success('Contact updated', 'Your contact details have been saved.');
+    } catch (e) {
+      notify.error('Update failed', e.message);
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -156,6 +205,9 @@ export default function PatientProfile() {
       </div>
     );
   }
+
+  const displayName = commonUser?.fullName || user?.fullName || '—';
+  const displayEmail = commonUser?.email || user?.email || '—';
 
   return (
     <div className="p-6 max-w-2xl">
@@ -181,27 +233,81 @@ export default function PatientProfile() {
         />
       ) : null}
 
+      {/* ── Contact / Account card (always shown) ── */}
+      <Card className="rounded-2xl shadow-sm border-0 mb-6">
+        {/* Avatar header */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 pb-6 border-b border-neutral-100">
+          <Avatar
+            size={80}
+            icon={<UserOutlined />}
+            className="flex-shrink-0 bg-green-100 text-green-600"
+          />
+          <div>
+            <Text strong className="text-lg block">{displayName}</Text>
+            <Text type="secondary" className="text-sm block">
+              <MailOutlined className="mr-1" />{displayEmail}
+            </Text>
+            <Tag color="green" className="mt-1">Patient</Tag>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <Text strong className="text-base">Contact details</Text>
+          {!editingContact ? (
+            <Button icon={<EditOutlined />} onClick={() => setEditingContact(true)}>
+              Edit contact
+            </Button>
+          ) : null}
+        </div>
+
+        {!editingContact ? (
+          <Descriptions column={1} bordered size="middle">
+            <Descriptions.Item label="First Name">{commonUser?.firstName || user?.firstName || '—'}</Descriptions.Item>
+            <Descriptions.Item label="Last Name">{commonUser?.lastName || user?.lastName || '—'}</Descriptions.Item>
+            <Descriptions.Item label="Email">{displayEmail}</Descriptions.Item>
+            <Descriptions.Item label="Phone">
+              <PhoneOutlined className="mr-1" />
+              {commonUser?.phoneNumber || '—'}
+            </Descriptions.Item>
+          </Descriptions>
+        ) : (
+          <Form form={contactForm} layout="vertical" onFinish={handleUpdateContact} size="large">
+            <Form.Item name="firstName" label="First Name" rules={[{ required: true, min: 2 }]}>
+              <Input placeholder="First name" />
+            </Form.Item>
+            <Form.Item name="lastName" label="Last Name" rules={[{ required: true, min: 2 }]}>
+              <Input placeholder="Last name" />
+            </Form.Item>
+            <Form.Item name="phoneNumber" label="Phone Number">
+              <Input placeholder="+94 71 234 5678" />
+            </Form.Item>
+            <Space wrap>
+              <Button type="primary" htmlType="submit" loading={savingContact}>
+                Save contact
+              </Button>
+              <Button
+                disabled={savingContact}
+                onClick={() => {
+                  setEditingContact(false);
+                  contactForm.resetFields();
+                }}
+              >
+                Cancel
+              </Button>
+            </Space>
+          </Form>
+        )}
+      </Card>
+
+      {/* ── Health info card (view/edit) or create form ── */}
       {mode === 'view' && profile ? (
         <>
           <Card className="rounded-2xl shadow-sm border-0 mb-6">
-            {/* Avatar header */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 pb-6 border-b border-neutral-100">
-              <Avatar
-                size={80}
-                icon={<UserOutlined />}
-                className="flex-shrink-0 bg-green-100 text-green-600"
-              />
-              <div>
-                <Text strong className="text-lg block">{profile.fullName}</Text>
-                <Tag color="green" className="mt-1">Patient</Tag>
-              </div>
-            </div>
-
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-              <Text strong className="text-base">Personal details</Text>
+              <Text strong className="text-base">Health details</Text>
               {!editingProfile ? (
                 <Button icon={<EditOutlined />} onClick={() => setEditingProfile(true)}>
-                  Edit details
+                  Edit health info
                 </Button>
               ) : null}
             </div>
@@ -306,7 +412,7 @@ export default function PatientProfile() {
             onFinish={handleCreate}
             size="large"
             key={user?.id}
-            initialValues={{ fullName: user?.fullName }}
+            initialValues={{ fullName: commonUser?.fullName || user?.fullName }}
           >
             <Form.Item name="fullName" label="Full Name" rules={[{ required: true }]}>
               <Input placeholder="Your full name" />
