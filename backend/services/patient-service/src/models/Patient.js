@@ -17,7 +17,9 @@ const patientSchema = new mongoose.Schema(
     dateOfBirth: { type: Date, required: true },
     bloodType: { type: String, trim: true },
     allergies: { type: [String], default: [] },
-    medicalHistory: { type: [medicalHistoryEntrySchema], default: [] }
+    medicalHistory: { type: [medicalHistoryEntrySchema], default: [] },
+    /** Document _id from patient-service — set after the patient uploads a profile photo */
+    profilePhotoDocumentId: { type: String, default: null }
   },
   {
     timestamps: true,

@@ -5,6 +5,8 @@ export const appointmentApi = {
   list: (params) => patientClient.get('/appointments', { params }),
   getById: (id) => patientClient.get(`/appointments/${id}`),
   cancel: (id, reason) => patientClient.post(`/appointments/${id}/cancel`, { reason }),
+  approveCancellation: (id, adminNotes) =>
+    patientClient.put(`/appointments/${id}/approve-cancellation`, { adminNotes: adminNotes || '' }),
   listDoctors: (params) => patientClient.get('/doctors', { params }),
   getDoctorSlots: (doctorId, date) =>
     patientClient.get(`/doctors/${doctorId}/available-slots`, { params: { date } }),

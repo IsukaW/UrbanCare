@@ -12,41 +12,59 @@ import {
   Space,
   Alert,
   Timeline,
+  Upload,
 } from 'antd';
 import {
   UserOutlined,
   EditOutlined,
   HeartOutlined,
   FileTextOutlined,
-  PhoneOutlined,
+  CameraOutlined,
   MailOutlined,
+  PhoneOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { patientService } from '../../services/patient/patient.service';
 import { userService } from '../../services/common/user.service';
+import { medicalReportApi } from '../../services/patient/medicalReport.api';
 import useAuthStore from '../../store/authStore';
 import { notify } from '../../utils/notify';
 
 const { Title, Text } = Typography;
 
 export default function PatientProfile() {
-  const user = useAuthStore((s) => s.user);
+  const user    = useAuthStore((s) => s.user);
   const setAuth = useAuthStore((s) => s.setAuth);
-  const token = useAuthStore((s) => s.token);
+  const token   = useAuthStore((s) => s.token);
 
-  const [commonUser, setCommonUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [savingContact, setSavingContact] = useState(false);
-  const [mode, setMode] = useState('view'); // 'view' | 'create'
+  const [commonUser,     setCommonUser]     = useState(null);
+  const [profile,        setProfile]        = useState(null);
+  const [photoUrl,       setPhotoUrl]       = useState(null);
+  const [loading,        setLoading]        = useState(true);
+  const [saving,         setSaving]         = useState(false);
+  const [savingContact,  setSavingContact]  = useState(false);
+  const [mode,           setMode]           = useState('view');
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingContact, setEditingContact] = useState(false);
-  const [loadError, setLoadError] = useState('');
+  const [loadError,      setLoadError]      = useState('');
   const [createForm] = Form.useForm();
-  const [editForm] = Form.useForm();
-  const [contactForm] = Form.useForm();
+  const [editForm]   = Form.useForm();
+  const [contactForm]= Form.useForm();
   const loadSeq = useRef(0);
+
+  const loadPhotoUrl = useCallback(async (patientDocId, photoDocId) => {
+    if (!patientDocId || !photoDocId) { setPhotoUrl(null); return; }
+    try {
+      const url = await medicalReportApi.getViewUrl(patientDocId, photoDocId);
+      setPhotoUrl(url);
+    } catch {
+      setPhotoUrl(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => { if (photoUrl) URL.revokeObjectURL(photoUrl); };
+  }, [photoUrl]);
 
   const loadProfile = useCallback(() => {
     if (!user) {
@@ -61,29 +79,26 @@ export default function PatientProfile() {
     setLoading(true);
     setLoadError('');
 
-    // Fetch both common user and patient profile in parallel
     Promise.allSettled([
       userService.getById(user.id),
       patientService.getById(user.id),
     ]).then(([userResult, patientResult]) => {
       if (seq !== loadSeq.current) return;
 
-      // Handle common user result
       if (userResult.status === 'fulfilled') {
         setCommonUser(userResult.value);
       } else {
-        // Non-fatal — fall back to the stored auth user
         setCommonUser(null);
       }
 
-      // Handle patient profile result
       if (patientResult.status === 'fulfilled') {
-        setProfile(patientResult.value);
+        const p = patientResult.value;
+        setProfile(p);
         setMode('view');
         setEditingProfile(false);
+        loadPhotoUrl(String(p._id), p.profilePhotoDocumentId);
       } else {
         const err = patientResult.reason;
-        // 404 means no patient profile created yet — show create form
         if (err?.message?.toLowerCase().includes('not found') || err?.response?.status === 404) {
           setProfile(null);
           setMode('create');
@@ -96,45 +111,83 @@ export default function PatientProfile() {
 
       setLoading(false);
     });
-  }, [user]);
+  }, [user, loadPhotoUrl]);
 
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   useEffect(() => {
     if (!profile || !editingProfile) return;
     editForm.setFieldsValue({
-      fullName: profile.fullName,
-      dateOfBirth: profile.dateOfBirth
-        ? dayjs(profile.dateOfBirth).format('YYYY-MM-DD')
-        : '',
-      bloodType: profile.bloodType ?? '',
-      allergies: profile.allergies?.join(', ') ?? '',
+      fullName:    profile.fullName,
+      dateOfBirth: profile.dateOfBirth ? dayjs(profile.dateOfBirth).format('YYYY-MM-DD') : '',
+      bloodType:   profile.bloodType ?? '',
+      allergies:   profile.allergies?.join(', ') ?? '',
     });
   }, [profile, editingProfile, editForm]);
 
   useEffect(() => {
     if (!commonUser || !editingContact) return;
     contactForm.setFieldsValue({
-      firstName: commonUser.firstName ?? '',
-      lastName: commonUser.lastName ?? '',
+      firstName:   commonUser.firstName   ?? '',
+      lastName:    commonUser.lastName    ?? '',
       phoneNumber: commonUser.phoneNumber ?? '',
     });
   }, [commonUser, editingContact, contactForm]);
+
+  const handlePhotoBeforeUpload = async (file) => {
+    if (!profile) {
+      notify.error('Photo upload failed', 'Create your health profile first.');
+      return false;
+    }
+    if (!file.type.startsWith('image/')) {
+      notify.error('Invalid file', 'Please choose an image file (JPEG, PNG, or WebP).');
+      return false;
+    }
+    setSaving(true);
+    try {
+      const { data: doc } = await medicalReportApi.upload(
+        String(profile._id),
+        file,
+        { category: 'other', description: 'Patient profile photo' }
+      );
+      const docId = doc._id ?? doc.id;
+      const updated = await patientService.update(user.id, { profilePhotoDocumentId: String(docId) });
+      setProfile(updated);
+      const url = await medicalReportApi.getViewUrl(String(updated._id), updated.profilePhotoDocumentId);
+      setPhotoUrl(url);
+      notify.success('Profile photo updated');
+    } catch (e) {
+      notify.error('Photo upload failed', e.message);
+    } finally {
+      setSaving(false);
+    }
+    return false;
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!profile) return;
+    setSaving(true);
+    try {
+      const updated = await patientService.update(user.id, { profilePhotoDocumentId: null });
+      setProfile(updated);
+      setPhotoUrl(null);
+      notify.success('Profile photo removed');
+    } catch (e) {
+      notify.error('Could not remove photo', e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleCreate = async (values) => {
     setSaving(true);
     try {
       const newProfile = await patientService.create({
-        userId: user.id,
-        fullName: values.fullName,
+        userId:      user.id,
+        fullName:    values.fullName,
         dateOfBirth: values.dateOfBirth,
-        bloodType: values.bloodType || undefined,
-        allergies: values.allergies
-          ?.split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        bloodType:   values.bloodType || undefined,
+        allergies:   values.allergies?.split(',').map((s) => s.trim()).filter(Boolean),
       });
       setProfile(newProfile);
       setMode('view');
@@ -150,13 +203,10 @@ export default function PatientProfile() {
     setSaving(true);
     try {
       const updated = await patientService.update(user.id, {
-        fullName: values.fullName,
+        fullName:    values.fullName,
         dateOfBirth: values.dateOfBirth,
-        bloodType: values.bloodType || '',
-        allergies: values.allergies
-          ?.split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        bloodType:   values.bloodType || '',
+        allergies:   values.allergies?.split(',').map((s) => s.trim()).filter(Boolean),
       });
       setProfile(updated);
       setEditingProfile(false);
@@ -172,13 +222,12 @@ export default function PatientProfile() {
     setSavingContact(true);
     try {
       const updated = await userService.update(user.id, {
-        firstName: values.firstName,
-        lastName: values.lastName,
+        firstName:   values.firstName,
+        lastName:    values.lastName,
         phoneNumber: values.phoneNumber || '',
       });
       setCommonUser(updated);
       setEditingContact(false);
-      // Sync updated name back into the auth store so the navbar etc. reflects it
       if (updated.fullName && token) {
         setAuth(token, { ...user, fullName: updated.fullName, firstName: updated.firstName, lastName: updated.lastName });
       }
@@ -191,30 +240,20 @@ export default function PatientProfile() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Spin size="large" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-64"><Spin size="large" /></div>;
   }
 
   if (!user) {
-    return (
-      <div className="p-6 max-w-2xl">
-        <Text type="danger">Sign in to manage your profile.</Text>
-      </div>
-    );
+    return <div className="p-6 max-w-2xl"><Text type="danger">Sign in to manage your profile.</Text></div>;
   }
 
-  const displayName = commonUser?.fullName || user?.fullName || '—';
-  const displayEmail = commonUser?.email || user?.email || '—';
+  const displayName  = commonUser?.fullName || user?.fullName || '—';
+  const displayEmail = commonUser?.email    || user?.email    || '—';
 
   return (
     <div className="p-6 max-w-2xl">
       <div className="mb-6">
-        <Title level={3} style={{ margin: 0 }}>
-          My Profile
-        </Title>
+        <Title level={3} style={{ margin: 0 }}>My Profile</Title>
         <Text type="secondary">View and edit your personal health information</Text>
       </div>
 
@@ -225,49 +264,69 @@ export default function PatientProfile() {
           description={loadError}
           showIcon
           className="mb-4"
-          action={
-            <Button size="small" onClick={() => loadProfile()}>
-              Retry
-            </Button>
-          }
+          action={<Button size="small" onClick={() => loadProfile()}>Retry</Button>}
         />
       ) : null}
 
-      {/* ── Contact / Account card (always shown) ── */}
+      {/* Contact / Account card */}
       <Card className="rounded-2xl shadow-sm border-0 mb-6">
-        {/* Avatar header */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 pb-6 border-b border-neutral-100">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-6 mb-6 pb-6 border-b border-neutral-100">
           <Avatar
-            size={80}
-            icon={<UserOutlined />}
+            size={96}
+            src={photoUrl}
+            icon={!photoUrl ? <UserOutlined /> : undefined}
             className="flex-shrink-0 bg-green-100 text-green-600"
           />
-          <div>
+          <div className="flex-1 min-w-0">
             <Text strong className="text-lg block">{displayName}</Text>
-            <Text type="secondary" className="text-sm block">
+            <Text type="secondary" className="text-sm block mb-1">
               <MailOutlined className="mr-1" />{displayEmail}
             </Text>
-            <Tag color="green" className="mt-1">Patient</Tag>
+            <Tag color="green" className="mb-3">Patient</Tag>
+            <div>
+              <Text type="secondary" className="text-xs block mb-2">
+                Profile photo — JPG, PNG, or WebP. Max 5 MB.
+              </Text>
+              <Space wrap>
+                <Upload
+                  accept="image/jpeg,image/png,image/webp"
+                  showUploadList={false}
+                  beforeUpload={handlePhotoBeforeUpload}
+                  disabled={saving || !profile}
+                >
+                  <Button icon={<CameraOutlined />} loading={saving} disabled={!profile}>
+                    {photoUrl ? 'Change photo' : 'Upload photo'}
+                  </Button>
+                </Upload>
+                {photoUrl ? (
+                  <Button danger type="text" disabled={saving} onClick={handleRemovePhoto}>
+                    Remove photo
+                  </Button>
+                ) : null}
+              </Space>
+              {!profile && (
+                <Text type="secondary" className="text-xs block mt-1">
+                  Create your health profile below to enable photo upload.
+                </Text>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <Text strong className="text-base">Contact details</Text>
           {!editingContact ? (
-            <Button icon={<EditOutlined />} onClick={() => setEditingContact(true)}>
-              Edit contact
-            </Button>
+            <Button icon={<EditOutlined />} onClick={() => setEditingContact(true)}>Edit contact</Button>
           ) : null}
         </div>
 
         {!editingContact ? (
           <Descriptions column={1} bordered size="middle">
             <Descriptions.Item label="First Name">{commonUser?.firstName || user?.firstName || '—'}</Descriptions.Item>
-            <Descriptions.Item label="Last Name">{commonUser?.lastName || user?.lastName || '—'}</Descriptions.Item>
+            <Descriptions.Item label="Last Name">{commonUser?.lastName  || user?.lastName  || '—'}</Descriptions.Item>
             <Descriptions.Item label="Email">{displayEmail}</Descriptions.Item>
             <Descriptions.Item label="Phone">
-              <PhoneOutlined className="mr-1" />
-              {commonUser?.phoneNumber || '—'}
+              <PhoneOutlined className="mr-1" />{commonUser?.phoneNumber || '—'}
             </Descriptions.Item>
           </Descriptions>
         ) : (
@@ -282,33 +341,21 @@ export default function PatientProfile() {
               <Input placeholder="+94 71 234 5678" />
             </Form.Item>
             <Space wrap>
-              <Button type="primary" htmlType="submit" loading={savingContact}>
-                Save contact
-              </Button>
-              <Button
-                disabled={savingContact}
-                onClick={() => {
-                  setEditingContact(false);
-                  contactForm.resetFields();
-                }}
-              >
-                Cancel
-              </Button>
+              <Button type="primary" htmlType="submit" loading={savingContact}>Save contact</Button>
+              <Button disabled={savingContact} onClick={() => { setEditingContact(false); contactForm.resetFields(); }}>Cancel</Button>
             </Space>
           </Form>
         )}
       </Card>
 
-      {/* ── Health info card (view/edit) or create form ── */}
+      {/* Health profile card */}
       {mode === 'view' && profile ? (
         <>
           <Card className="rounded-2xl shadow-sm border-0 mb-6">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <Text strong className="text-base">Health details</Text>
               {!editingProfile ? (
-                <Button icon={<EditOutlined />} onClick={() => setEditingProfile(true)}>
-                  Edit health info
-                </Button>
+                <Button icon={<EditOutlined />} onClick={() => setEditingProfile(true)}>Edit health info</Button>
               ) : null}
             </div>
 
@@ -316,20 +363,14 @@ export default function PatientProfile() {
               <Descriptions column={1} bordered size="middle">
                 <Descriptions.Item label="Full Name">{profile.fullName}</Descriptions.Item>
                 <Descriptions.Item label="Date of Birth">
-                  {profile.dateOfBirth
-                    ? dayjs(profile.dateOfBirth).format('DD MMM YYYY')
-                    : '—'}
+                  {profile.dateOfBirth ? dayjs(profile.dateOfBirth).format('DD MMM YYYY') : '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Blood Type">
                   <Tag color="red">{profile.bloodType || 'N/A'}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Allergies">
                   {profile.allergies?.length
-                    ? profile.allergies.map((a) => (
-                        <Tag key={a} color="orange" className="mb-1">
-                          {a}
-                        </Tag>
-                      ))
+                    ? profile.allergies.map((a) => <Tag key={a} color="orange" className="mb-1">{a}</Tag>)
                     : 'None'}
                 </Descriptions.Item>
               </Descriptions>
@@ -348,31 +389,16 @@ export default function PatientProfile() {
                   <Input placeholder="Penicillin, Peanuts" />
                 </Form.Item>
                 <Space wrap>
-                  <Button type="primary" htmlType="submit" loading={saving}>
-                    Save changes
-                  </Button>
-                  <Button
-                    disabled={saving}
-                    onClick={() => {
-                      setEditingProfile(false);
-                      editForm.resetFields();
-                    }}
-                  >
-                    Cancel
-                  </Button>
+                  <Button type="primary" htmlType="submit" loading={saving}>Save changes</Button>
+                  <Button disabled={saving} onClick={() => { setEditingProfile(false); editForm.resetFields(); }}>Cancel</Button>
                 </Space>
               </Form>
             )}
           </Card>
 
-          {/* Medical History */}
           <Card
             className="rounded-2xl shadow-sm border-0"
-            title={
-              <span className="flex items-center gap-2">
-                <FileTextOutlined /> Medical History
-              </span>
-            }
+            title={<span className="flex items-center gap-2"><FileTextOutlined /> Medical History</span>}
           >
             {profile?.medicalHistory?.length ? (
               <Timeline
@@ -381,16 +407,10 @@ export default function PatientProfile() {
                   children: (
                     <div>
                       <div className="font-semibold">{rec.diagnosis}</div>
-                      {rec.treatment && (
-                        <div className="text-sm text-gray-500">Treatment: {rec.treatment}</div>
-                      )}
-                      {rec.notes && (
-                        <div className="text-sm text-gray-400 italic">{rec.notes}</div>
-                      )}
+                      {rec.treatment && <div className="text-sm text-gray-500">Treatment: {rec.treatment}</div>}
+                      {rec.notes     && <div className="text-sm text-gray-400 italic">{rec.notes}</div>}
                       <div className="text-xs text-gray-300 mt-1">
-                        {rec.recordedAt
-                          ? dayjs(rec.recordedAt).format('DD MMM YYYY')
-                          : ''}
+                        {rec.recordedAt ? dayjs(rec.recordedAt).format('DD MMM YYYY') : ''}
                       </div>
                     </div>
                   ),
