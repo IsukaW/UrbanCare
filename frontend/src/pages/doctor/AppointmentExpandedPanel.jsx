@@ -830,7 +830,7 @@ async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation
 
   // Right side: doctor info
   const drLines = [
-    `Dr. ${appt.doctorName}`,
+    appt.doctorName,
     appt.doctorSpecialty || '',
     ...(doctorProfile?.qualifications ?? []).slice(0, 2),
     `Date: ${dayjs().format('DD MMM YYYY')}`,
@@ -967,7 +967,7 @@ async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation
   doc.setTextColor(107, 114, 128);
 
   doc.text(
-    `Dr. ${appt.doctorName}  ·  ${appt.doctorSpecialty || ''}`,
+    `${appt.doctorName}  ·  ${appt.doctorSpecialty || ''}`,
     margin, footerY + 3,
   );
   if (doctorProfile?._id) {
