@@ -4,7 +4,7 @@ import {
 } from 'antd';
 import {
   CalendarOutlined, ClockCircleOutlined, UserOutlined,
-  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined, EditOutlined, CheckCircleOutlined,
+  VideoCameraOutlined, ReloadOutlined, MedicineBoxOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import { notify } from '../../utils/notify';
 import { appointmentService } from '../../services/appointment/appointment.service';
@@ -33,7 +33,6 @@ export default function AdminAppointments() {
   const [approveNotes, setApproveNotes] = useState('');
   const [approveLoading, setApproveLoading] = useState(false);
   const [patientNames, setPatientNames] = useState({});
-  const [form]                          = Form.useForm();
   const [page, setPage]                 = useState(1);
   const [total, setTotal]               = useState(0);
   const PAGE_SIZE = 10;
@@ -76,26 +75,6 @@ export default function AdminAppointments() {
 
   useEffect(() => { load(); }, []);
 
-  const openEdit = (appt) => {
-    form.setFieldsValue({ status: appt.status, reason: appt.reason });
-    setEditAppt(appt);
-  };
-
-  const handleSave = async (values) => {
-    setSaving(true);
-    try {
-      const updated = await appointmentService.update(editAppt._id, values);
-      notify.success('Appointment updated');
-      setAppointments((prev) =>
-        prev.map((a) => a._id === editAppt._id ? { ...a, ...updated } : a)
-      );
-      setEditAppt(null);
-    } catch (e) {
-      notify.error('Update failed', e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleApproveCancellation = async () => {
     if (!approveModal) return;
@@ -245,13 +224,6 @@ export default function AdminAppointments() {
                         Approve Cancellation
                       </Button>
                     )}
-                    <Button
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => openEdit(appt)}
-                    >
-                      Update
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -299,24 +271,6 @@ export default function AdminAppointments() {
         />
       </Modal>
 
-      {/* Edit modal */}
-      <Modal
-        title="Update Appointment"
-        open={!!editAppt}
-        onCancel={() => setEditAppt(null)}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" onFinish={handleSave} className="mt-4">
-          <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-            <Select options={STATUS_OPTIONS} />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setEditAppt(null)}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={saving}>Save</Button>
-          </div>
-        </Form>
-      </Modal>
     </div>
   );
 }
