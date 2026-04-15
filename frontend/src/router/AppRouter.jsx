@@ -5,6 +5,7 @@ import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import AppLayout from '../components/layout/AppLayout';
 import { ROLES } from '../constants/roles';
+import LandingPage from '../pages/LandingPage';
 
 // Auth pages
 import LoginPage from '../pages/auth/LoginPage';
@@ -51,6 +52,9 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Landing page */}
+        <Route path="/" element={<LandingPage />} />
+
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -66,9 +70,6 @@ export default function AppRouter() {
             </ProtectedRoute>
           }
         >
-          {/* Root → role home */}
-          <Route index element={<RoleRedirect />} />
-
           {/* ─── Admin ─── */}
           <Route
             path="/admin/dashboard"
