@@ -251,7 +251,7 @@ export default function PatientProfile() {
   const displayEmail = commonUser?.email    || user?.email    || '—';
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
         <Title level={3} style={{ margin: 0 }}>My Profile</Title>
         <Text type="secondary">View and edit your personal health information</Text>
@@ -268,8 +268,9 @@ export default function PatientProfile() {
         />
       ) : null}
 
+      <div className={mode === 'view' && profile ? 'grid gap-6 xl:grid-cols-[minmax(360px,1fr)_minmax(440px,1fr)] mb-6' : undefined}>
       {/* Contact / Account card */}
-      <Card className="rounded-2xl shadow-sm border-0 mb-6">
+      <Card className="rounded-2xl shadow-sm border-0">
         <div className="flex flex-col sm:flex-row sm:items-start gap-6 mb-6 pb-6 border-b border-neutral-100">
           <Avatar
             size={96}
@@ -350,80 +351,50 @@ export default function PatientProfile() {
 
       {/* Health profile card */}
       {mode === 'view' && profile ? (
-        <>
-          <Card className="rounded-2xl shadow-sm border-0 mb-6">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-              <Text strong className="text-base">Health details</Text>
-              {!editingProfile ? (
-                <Button icon={<EditOutlined />} onClick={() => setEditingProfile(true)}>Edit health info</Button>
-              ) : null}
-            </div>
-
+        <Card className="rounded-2xl shadow-sm border-0 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <Text strong className="text-base">Health details</Text>
             {!editingProfile ? (
-              <Descriptions column={1} bordered size="middle">
-                <Descriptions.Item label="Full Name">{profile.fullName}</Descriptions.Item>
-                <Descriptions.Item label="Date of Birth">
-                  {profile.dateOfBirth ? dayjs(profile.dateOfBirth).format('DD MMM YYYY') : '—'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Blood Type">
-                  <Tag color="red">{profile.bloodType || 'N/A'}</Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Allergies">
-                  {profile.allergies?.length
-                    ? profile.allergies.map((a) => <Tag key={a} color="orange" className="mb-1">{a}</Tag>)
-                    : 'None'}
-                </Descriptions.Item>
-              </Descriptions>
-            ) : (
-              <Form form={editForm} layout="vertical" onFinish={handleUpdateProfile} size="large">
-                <Form.Item name="fullName" label="Full Name" rules={[{ required: true }]}>
-                  <Input placeholder="Your full name" />
-                </Form.Item>
-                <Form.Item name="dateOfBirth" label="Date of Birth" rules={[{ required: true }]}>
-                  <Input type="date" />
-                </Form.Item>
-                <Form.Item name="bloodType" label="Blood Type">
-                  <Input placeholder="e.g., A+, O-, B+" />
-                </Form.Item>
-                <Form.Item name="allergies" label="Allergies (comma separated)">
-                  <Input placeholder="Penicillin, Peanuts" />
-                </Form.Item>
-                <Space wrap>
-                  <Button type="primary" htmlType="submit" loading={saving}>Save changes</Button>
-                  <Button disabled={saving} onClick={() => { setEditingProfile(false); editForm.resetFields(); }}>Cancel</Button>
-                </Space>
-              </Form>
-            )}
-          </Card>
+              <Button icon={<EditOutlined />} onClick={() => setEditingProfile(true)}>Edit health info</Button>
+            ) : null}
+          </div>
 
-          <Card
-            className="rounded-2xl shadow-sm border-0"
-            title={<span className="flex items-center gap-2"><FileTextOutlined /> Medical History</span>}
-          >
-            {profile?.medicalHistory?.length ? (
-              <Timeline
-                items={profile.medicalHistory.map((rec) => ({
-                  color: 'blue',
-                  children: (
-                    <div>
-                      <div className="font-semibold">{rec.diagnosis}</div>
-                      {rec.treatment && <div className="text-sm text-gray-500">Treatment: {rec.treatment}</div>}
-                      {rec.notes     && <div className="text-sm text-gray-400 italic">{rec.notes}</div>}
-                      <div className="text-xs text-gray-300 mt-1">
-                        {rec.recordedAt ? dayjs(rec.recordedAt).format('DD MMM YYYY') : ''}
-                      </div>
-                    </div>
-                  ),
-                }))}
-              />
-            ) : (
-              <div className="text-center py-8 text-gray-400">
-                <HeartOutlined className="text-3xl mb-2" />
-                <div>No medical history records</div>
-              </div>
-            )}
-          </Card>
-        </>
+          {!editingProfile ? (
+            <Descriptions column={1} bordered size="middle">
+              <Descriptions.Item label="Full Name">{profile.fullName}</Descriptions.Item>
+              <Descriptions.Item label="Date of Birth">
+                {profile.dateOfBirth ? dayjs(profile.dateOfBirth).format('DD MMM YYYY') : '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Blood Type">
+                <Tag color="red">{profile.bloodType || 'N/A'}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Allergies">
+                {profile.allergies?.length
+                  ? profile.allergies.map((a) => <Tag key={a} color="orange" className="mb-1">{a}</Tag>)
+                  : 'None'}
+              </Descriptions.Item>
+            </Descriptions>
+          ) : (
+            <Form form={editForm} layout="vertical" onFinish={handleUpdateProfile} size="large">
+              <Form.Item name="fullName" label="Full Name" rules={[{ required: true }]}>
+                <Input placeholder="Your full name" />
+              </Form.Item>
+              <Form.Item name="dateOfBirth" label="Date of Birth" rules={[{ required: true }]}>
+                <Input type="date" />
+              </Form.Item>
+              <Form.Item name="bloodType" label="Blood Type">
+                <Input placeholder="e.g., A+, O-, B+" />
+              </Form.Item>
+              <Form.Item name="allergies" label="Allergies (comma separated)">
+                <Input placeholder="Penicillin, Peanuts" />
+              </Form.Item>
+              <Space wrap>
+                <Button type="primary" htmlType="submit" loading={saving}>Save changes</Button>
+                <Button disabled={saving} onClick={() => { setEditingProfile(false); editForm.resetFields(); }}>Cancel</Button>
+              </Space>
+            </Form>
+          )}
+        </Card>
       ) : !loadError ? (
         <Card className="rounded-2xl shadow-sm border-0" title="Create Patient Profile">
           <Form
@@ -450,6 +421,37 @@ export default function PatientProfile() {
               Create Profile
             </Button>
           </Form>
+        </Card>
+      ) : null}
+      </div>
+
+      {mode === 'view' && profile ? (
+        <Card
+          className="rounded-2xl shadow-sm border-0"
+          title={<span className="flex items-center gap-2"><FileTextOutlined /> Medical History</span>}
+        >
+          {profile?.medicalHistory?.length ? (
+            <Timeline
+              items={profile.medicalHistory.map((rec) => ({
+                color: 'blue',
+                children: (
+                  <div>
+                    <div className="font-semibold">{rec.diagnosis}</div>
+                    {rec.treatment && <div className="text-sm text-gray-500">Treatment: {rec.treatment}</div>}
+                    {rec.notes     && <div className="text-sm text-gray-400 italic">{rec.notes}</div>}
+                    <div className="text-xs text-gray-300 mt-1">
+                      {rec.recordedAt ? dayjs(rec.recordedAt).format('DD MMM YYYY') : ''}
+                    </div>
+                  </div>
+                ),
+              }))}
+            />
+          ) : (
+            <div className="text-center py-8 text-gray-400">
+              <HeartOutlined className="text-3xl mb-2" />
+              <div>No medical history records</div>
+            </div>
+          )}
         </Card>
       ) : null}
     </div>
