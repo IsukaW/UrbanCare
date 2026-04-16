@@ -47,7 +47,7 @@ export default function BookAppointment() {
   const [newFiles, setNewFiles]     = useState([]); // [{ uid, file, name, status, docId }]
   const [uploading, setUploading]   = useState(false);
 
-  // ── Load patient profile + medical records on mount ────────────────────────
+  // load patient profile + medical records on mount
   useEffect(() => {
     patientService
       .getById(user.id)
@@ -62,7 +62,7 @@ export default function BookAppointment() {
       .finally(() => setLoadingRecords(false));
   }, []);
 
-  // ── Load all doctors on mount ─────────────────────────────────────────────
+  // load all doctors on mount
   useEffect(() => {
     appointmentService
       .listDoctors()
@@ -78,7 +78,7 @@ export default function BookAppointment() {
       .finally(() => setLoadingDoctors(false));
   }, []);
 
-  // ── Fetch slots when doctor + date selected ───────────────────────────────
+  // fetch slots when doctor + date selected
   useEffect(() => {
     if (!selectedDoctor || !selectedDate) {
       setSlots([]);
@@ -107,7 +107,7 @@ export default function BookAppointment() {
       .finally(() => setLoadingSlots(false));
   }, [selectedDoctor, selectedDate]);
 
-  // ── Book ──────────────────────────────────────────────────────────────────
+  // book
   const handleBook = async (values) => {
     if (!selectedSlot) {
       notify.error('No slot selected', 'Please select a time slot.');
@@ -199,7 +199,7 @@ export default function BookAppointment() {
     resetForm();
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // render
   return (
     <div className="p-6 h-full">
       <PaymentModal

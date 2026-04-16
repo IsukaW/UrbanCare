@@ -20,7 +20,7 @@ const VALID_CATEGORIES = [
   'other'
 ];
 
-// ── Validation schemas ────────────────────────────────────────────────────────
+// validation schemas
 
 const uploadSchema = Joi.object({
   category: Joi.string().valid(...VALID_CATEGORIES).default('other'),
@@ -35,9 +35,9 @@ const listQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(20)
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// helpers
 
-/** Verify patient exists and requester has access. */
+// verifies patient exists and requester has access
 const resolvePatient = async (patientId, user) => {
   const patient = await Patient.findById(patientId);
   if (!patient) {
@@ -49,12 +49,9 @@ const resolvePatient = async (patientId, user) => {
   return patient;
 };
 
-// ── Controllers ───────────────────────────────────────────────────────────────
+// controllers
 
-/**
- * POST /patients/:patientId/documents
- * Upload one medical document for a patient via common-service.
- */
+// POST /patients/:patientId/documents
 const uploadDocument = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'A file is required');
@@ -90,10 +87,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
   }
 });
 
-/**
- * GET /patients/:patientId/documents
- * List all documents linked to this patient.
- */
+// GET /patients/:patientId/documents
 const listDocuments = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 
@@ -121,10 +115,7 @@ const listDocuments = asyncHandler(async (req, res) => {
   }
 });
 
-/**
- * GET /patients/:patientId/documents/:documentId
- * View a single document inline in the browser.
- */
+// GET /patients/:patientId/documents/:documentId — inline view
 const getDocument = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 
@@ -144,10 +135,7 @@ const getDocument = asyncHandler(async (req, res) => {
   }
 });
 
-/**
- * GET /patients/:patientId/documents/:documentId/download
- * Download a document as a file attachment.
- */
+// GET /patients/:patientId/documents/:documentId/download
 const downloadDocument = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 
@@ -167,10 +155,7 @@ const downloadDocument = asyncHandler(async (req, res) => {
   }
 });
 
-/**
- * DELETE /patients/:patientId/documents/:documentId
- * Delete a document. Only uploader or admin.
- */
+// DELETE /patients/:patientId/documents/:documentId
 const deleteDocument = asyncHandler(async (req, res) => {
   await resolvePatient(req.params.patientId, req.user);
 

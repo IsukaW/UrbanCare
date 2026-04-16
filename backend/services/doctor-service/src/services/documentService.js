@@ -2,19 +2,8 @@ const FormData = require('form-data');
 const axios = require('axios');
 const { env } = require('../config/env');
 
-/**
- * Uploads a file buffer to the common-service document store.
- * In doctor-service this is only invoked from authenticated doctor routes (own profile photo).
- *
- * @param {object} options
- * @param {Buffer}  options.buffer          - Raw file bytes
- * @param {string}  options.originalname    - Original filename
- * @param {string}  options.mimetype        - MIME type of the file
- * @param {string}  options.linkedDoctorId  - Doctor _id to link the document to
- * @param {string}  options.description     - Human-readable description
- * @param {string}  options.authorization   - Bearer token forwarded from the caller
- * @returns {Promise<object>}               - The first created document object from common-service
- */
+// Uploads a file buffer to the common-service document store as a profile_photo.
+// Only called from authenticated doctor routes.
 async function uploadDoctorDocument({ buffer, originalname, mimetype, linkedDoctorId, description, authorization }) {
   const form = new FormData();
   form.append('files', buffer, { filename: originalname, contentType: mimetype });

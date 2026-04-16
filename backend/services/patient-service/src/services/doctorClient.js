@@ -7,13 +7,7 @@ const client = axios.create({
   timeout: 5000
 });
 
-/**
- * Get all doctors with optional specialty filter
- * @param {object} options
- * @param {string} options.authorization - Bearer token
- * @param {string} [options.specialty] - Filter by specialization
- * @returns {Promise<Array>}
- */
+// Fetches all doctors, optionally filtered by specialty.
 async function getDoctors({ authorization, specialty } = {}) {
   try {
     const params = specialty ? { specialty } : {};
@@ -28,13 +22,7 @@ async function getDoctors({ authorization, specialty } = {}) {
   }
 }
 
-/**
- * Get a single doctor profile by ID
- * @param {object} options
- * @param {string} options.doctorId
- * @param {string} options.authorization
- * @returns {Promise<object>}
- */
+// Fetches a single doctor profile by their _id.
 async function getDoctorById({ doctorId, authorization }) {
   try {
     const { data } = await client.get(`/doctors/${doctorId}`, {
@@ -51,10 +39,8 @@ async function getDoctorById({ doctorId, authorization }) {
   }
 }
 
-/**
- * Resolve a doctor's profile _id from their auth userId.
- * Needed because appointments store the doctor profile _id, not the auth userId.
- */
+// Looks up a doctor's profile _id from their auth userId.
+// Appointments store the profile _id, not the auth userId, so this bridges the gap.
 async function getDoctorProfileByUserId({ userId, authorization }) {
   try {
     const { data } = await client.get(`/doctors/user/${userId}`, {
@@ -71,14 +57,7 @@ async function getDoctorProfileByUserId({ userId, authorization }) {
   }
 }
 
-/**
- * Get available slots for a doctor for a given week
- * @param {object} options
- * @param {string} options.doctorId
- * @param {string} options.weekStartMonday - YYYY-MM-DD (Monday of the week)
- * @param {string} options.authorization
- * @returns {Promise<Array>} - Array of slot objects that still have available tokens
- */
+// Returns available slots for a doctor for a given week. Returns [] on failure.
 async function getAvailableSlots({ doctorId, weekStartMonday, authorization }) {
   try {
     const { data } = await client.get(`/doctors/${doctorId}/slots/available`, {

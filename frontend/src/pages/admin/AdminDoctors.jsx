@@ -25,7 +25,7 @@ function slotKey(dayOfWeek, startTime, endTime) {
   return `${dayOfWeek}_${startTime}_${endTime}`;
 }
 
-/** Returns "X days this week" count for a doctor profile. */
+// returns the number of working days this week for a doctor profile
 function thisWeekAvailabilityDays(profile) {
   const monday = mondayOfWeekContaining(new Date());
   const raw = getSlotsForWeek(profile, monday);
@@ -33,7 +33,7 @@ function thisWeekAvailabilityDays(profile) {
   return new Set(slots.map((s) => s.dayOfWeek)).size;
 }
 
-/** Read-only calendar view of a doctor's weekly schedule. */
+// read-only weekly schedule calendar for a doctor profile
 function ScheduleCalendarView({ profile }) {
   const [weekStart, setWeekStart] = useState(() => mondayOfWeekContaining(new Date()));
 

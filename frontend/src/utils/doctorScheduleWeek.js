@@ -1,4 +1,4 @@
-/** Monday 00:00 local of the calendar week containing `d` (Mon–Sun grid). */
+// Returns Monday 00:00 local time for the calendar week containing d.
 export function mondayOfWeekContaining(d) {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const day = x.getDay();
@@ -8,7 +8,7 @@ export function mondayOfWeekContaining(d) {
   return x;
 }
 
-/** Stable YYYY-MM-DD for a Monday date (local). */
+// Formats a Monday date as YYYY-MM-DD string (local time).
 export function formatWeekStartMonday(mondayDate) {
   const x = new Date(mondayDate);
   const y = x.getFullYear();
@@ -23,12 +23,10 @@ export function addDays(date, n) {
   return x;
 }
 
-/**
- * Slots for one calendar week only (not recurring).
- * Past weeks: returns saved slots for that week, or [].
- * Future / weeks never configured: [].
- * Legacy `profile.schedule` (recurring) only applies to the current week until migrated server-side.
- */
+// Returns slots for one specific calendar week.
+// Past/future weeks without saved data return [].
+// Legacy recurring profile.schedule is only applied to the current week
+// until it gets migrated server-side.
 export function getSlotsForWeek(profile, mondayDate) {
   if (!profile) return [];
   const key = formatWeekStartMonday(mondayDate);

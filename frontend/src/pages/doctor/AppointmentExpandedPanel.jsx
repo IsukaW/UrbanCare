@@ -21,11 +21,11 @@ import { APPOINTMENT_STATUS } from '../../constants/appointment';
 const { Text } = Typography;
 const { TextArea } = Input;
 
-// ── key counter for prescription rows ────────────────────────────────────────
+// key counter for prescription rows
 let _keyCounter = 0;
 const nextKey = () => ++_keyCounter;
 
-// ── map saved medications to panel format ─────────────────────────────────────
+// map saved medications to panel format
 function mapSavedMeds(prescription) {
   if (!prescription?.medications?.length) return [];
   return prescription.medications.map((m) => ({
@@ -38,15 +38,13 @@ function mapSavedMeds(prescription) {
   }));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main component
+// AppointmentExpandedPanel
 // Props:
-//   appt          – appointment object from the backend
-//   onSaved       – (updatedAppt) => void  — called after a successful save
-//   onComplete    – (updatedAppt) => void  — called after marking as completed
-// ─────────────────────────────────────────────────────────────────────────────
+//   appt       - appointment object from the backend
+//   onSaved    - called with the updated appointment after a save
+//   onComplete - called with the updated appointment after marking complete
 export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) {
-  // ── remote data ────────────────────────────────────────────────────────────
+  // remote data
   const [patient,       setPatient]       = useState(null);
   const [doctorProfile, setDoctorProfile] = useState(null);
   const [medicalDocs,   setMedicalDocs]   = useState([]);
@@ -54,7 +52,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
   const [loadingDocs,    setLoadingDocs]    = useState(false);
   const [docsLoaded,     setDocsLoaded]     = useState(false);
 
-  // ── form state ────────────────────────────────────────────────────────────
+  // form state
   const [activeTab, setActiveTab] = useState('profile');
   const [prescriptionItems, setPrescriptionItems] = useState(() => mapSavedMeds(appt.prescription));
   const [consultation, setConsultation] = useState(() => ({
@@ -66,18 +64,18 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
       : null,
   }));
 
-  // ── note modal ────────────────────────────────────────────────────────────
+  // note modal
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [newNote,       setNewNote]       = useState({ diagnosis: '', treatment: '', notes: '' });
   const [savingNote,    setSavingNote]    = useState(false);
 
-  // ── action loading ─────────────────────────────────────────────────────────
+  // action loading
   const [saving,    setSaving]    = useState(false);
   const [completing, setCompleting] = useState(false);
 
   const isCompleted = appt.status === APPOINTMENT_STATUS.COMPLETED;
 
-  // ── load patient profile + doctor profile on mount ─────────────────────────
+  // load patient profile + doctor profile on mount
   useEffect(() => {
     let cancelled = false;
 
@@ -101,7 +99,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
     return () => { cancelled = true; };
   }, [appt.patientId, appt.doctorId]);
 
-  // ── lazy-load medical docs when Records tab is opened ─────────────────────
+  // lazy-load medical docs when records tab is opened
   const loadMedicalDocs = useCallback(async () => {
     if (docsLoaded || !patient) return;
     const linkedIds = new Set((appt.patientMedicalDocumentIds ?? []).map(String));
@@ -128,7 +126,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
     }
   }, [activeTab, patient, docsLoaded, loadMedicalDocs]);
 
-  // ── prescription helpers ──────────────────────────────────────────────────
+  // prescription helpers
   const addMedication = () =>
     setPrescriptionItems((p) => [...p, { key: nextKey(), name: '', dosage: '', frequency: '', duration: '', notes: '' }]);
 
@@ -138,7 +136,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
   const updateMedication = (key, field, value) =>
     setPrescriptionItems((p) => p.map((item) => item.key === key ? { ...item, [field]: value } : item));
 
-  // ── build API payload ─────────────────────────────────────────────────────
+  // build api payload
   const buildPayload = (includeComplete) => {
     const payload = {};
     const meds = prescriptionItems.filter((m) => m.name.trim());
@@ -173,7 +171,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
     return payload;
   };
 
-  // ── persist to backend ────────────────────────────────────────────────────
+  // persist to backend
   const doSave = async (includeComplete) => {
     const payload = buildPayload(includeComplete);
     if (!Object.keys(payload).length) {
@@ -231,7 +229,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
     }
   };
 
-  // ── add medical history note ──────────────────────────────────────────────
+  // add medical history note
   const handleAddNote = async () => {
     if (!newNote.diagnosis.trim()) {
       notify.warn('Diagnosis is required.');
@@ -261,7 +259,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
 
   const age = patient?.dateOfBirth ? dayjs().diff(dayjs(patient.dateOfBirth), 'year') : null;
 
-  // ── tab definitions ───────────────────────────────────────────────────────
+  // tab definitions
   const tabItems = [
     {
       key: 'profile',
@@ -313,7 +311,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
     },
   ];
 
-  // ── render ────────────────────────────────────────────────────────────────
+  // render
   return (
     <div
       className="mt-3 rounded-2xl border border-blue-100 shadow-md overflow-hidden"
@@ -451,9 +449,7 @@ export default function AppointmentExpandedPanel({ appt, onSaved, onComplete }) 
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Patient Profile
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: patient profile
 function PatientProfileTab({ patient, loading, age }) {
   if (loading) return <div className="flex justify-center py-10"><Spin /></div>;
   if (!patient) return <Empty description="Patient profile not available" />;
@@ -504,9 +500,7 @@ function PatientProfileTab({ patient, loading, age }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Medical Records
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: medical records
 const CATEGORY_COLORS = {
   lab_report:     'purple',
   prescription:   'blue',
@@ -573,9 +567,7 @@ function MedicalRecordsTab({ docs, loading, patientId, patientLoading }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Medical History
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: medical history
 function MedicalHistoryTab({ patient, loading, onAddNote, isCompleted }) {
   if (loading) return <div className="flex justify-center py-10"><Spin /></div>;
   if (!patient) return <Empty description="Patient data unavailable" />;
@@ -630,9 +622,7 @@ function MedicalHistoryTab({ patient, loading, onAddNote, isCompleted }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Prescription Builder
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: prescription builder
 function PrescriptionTab({ items, onAdd, onRemove, onUpdate, disabled }) {
   if (items.length === 0) {
     return (
@@ -740,9 +730,7 @@ function PrescriptionTab({ items, onAdd, onRemove, onUpdate, disabled }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Consultation Summary
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: consultation summary
 function ConsultationTab({ consultation, onChange, disabled }) {
   const update = (field) => (e) =>
     onChange((p) => ({ ...p, [field]: typeof e === 'string' || e === null ? e : e.target.value }));
@@ -796,9 +784,7 @@ function ConsultationTab({ consultation, onChange, disabled }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PDF Generator  (dynamic import keeps bundle lean until first use)
-// ─────────────────────────────────────────────────────────────────────────────
+// pdf generator  (dynamic import keeps bundle lean until first use)
 async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation, prescriptionItems) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -812,7 +798,7 @@ async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation
   const rightEdge = pageW - margin;
   let y = 0;
 
-  // ── Header band ────────────────────────────────────────────────────────────
+  // header band
   doc.setFillColor(37, 99, 235);
   doc.rect(0, 0, pageW, 48, 'F');
   doc.setFillColor(29, 78, 216);
@@ -845,7 +831,7 @@ async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation
   y = 58;
   doc.setTextColor(15, 23, 42);
 
-  // ── Patient information box ─────────────────────────────────────────────────
+  // patient information box
   doc.setFillColor(239, 246, 255);
   doc.roundedRect(margin, y - 3, pageW - 2 * margin, 38, 2, 2, 'F');
   doc.setDrawColor(191, 219, 254);
@@ -881,7 +867,7 @@ async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation
 
   y += 44;
 
-  // ── Consultation Notes ──────────────────────────────────────────────────────
+  // consultation notes
   const cFields = [
     ['Diagnosis',       consultation.diagnosis],
     ['Observations',    consultation.observations],
@@ -918,7 +904,7 @@ async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation
     y += 4;
   }
 
-  // ── Prescription table ──────────────────────────────────────────────────────
+  // prescription table
   const meds = prescriptionItems.filter((m) => m.name.trim());
   if (meds.length > 0) {
     doc.setFontSize(10.5);
@@ -957,7 +943,7 @@ async function generateAndDownloadPDF(appt, patient, doctorProfile, consultation
     y = doc.lastAutoTable.finalY + 8;
   }
 
-  // ── Footer ──────────────────────────────────────────────────────────────────
+  // footer
   const footerY = pageH - 22;
   doc.setDrawColor(209, 213, 219);
   doc.line(margin, footerY - 2, rightEdge, footerY - 2);

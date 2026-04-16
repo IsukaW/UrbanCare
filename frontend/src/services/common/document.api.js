@@ -1,10 +1,8 @@
 import { commonClient } from '../../utils/httpClients';
 
 export const documentApi = {
-  /**
-   * Upload files. `files` is a FileList or array of File objects.
-   * meta: { category, description, appointmentId, visibleTo: string[] }
-   */
+  // upload one or more files with optional metadata
+  // files: FileList or File[]; meta: { category, description, appointmentId, visibleTo }
   upload: (files, meta = {}) => {
     const form = new FormData();
     Array.from(files).forEach((file) => form.append('files', file));
@@ -17,22 +15,17 @@ export const documentApi = {
     });
   },
 
-  /** List documents accessible to the current user (metadata only, no data field) */
+  // lists documents accessible to the current user (metadata only, no data field)
   list: (params = {}) => commonClient.get('/documents', { params }),
 
-  /**
-   * Get a viewable object URL for the file (images, PDFs, etc.).
-   * Returns a string URL that can be used directly in <img src> or <iframe src>.
-   * Remember to call URL.revokeObjectURL(url) when done.
-   */
+  // returns an object URL for inline viewing (images, PDFs, etc.)
+  // call URL.revokeObjectURL(url) when done to free memory
   getViewUrl: async (id) => {
     const res = await commonClient.get(`/documents/${id}`, { responseType: 'blob' });
     return URL.createObjectURL(res.data);
   },
 
-  /**
-   * Trigger browser download of the file.
-   */
+  // triggers a browser file download
   download: async (id, originalName) => {
     const res = await commonClient.get(`/documents/${id}/download`, {
       responseType: 'blob',
@@ -45,6 +38,6 @@ export const documentApi = {
     URL.revokeObjectURL(url);
   },
 
-  /** Delete the document (uploader/admin only) */
+  // deletes the document (uploader or admin only)
   remove: (id) => commonClient.delete(`/documents/${id}`),
 };

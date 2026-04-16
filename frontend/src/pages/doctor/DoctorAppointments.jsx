@@ -26,7 +26,7 @@ import VideoCall from '../../components/VideoCall';
 const { Title, Text } = Typography;
 const SLOT_PAGE_SIZE = 3;
 
-// ── Slot status helpers ───────────────────────────────────────────────────────
+// slot status helpers
 const SLOT_STATUS_CFG = {
   OPEN:         { label: 'Open',         tagColor: 'green'   },
   FILLING_FAST: { label: 'Filling Fast', tagColor: 'orange'  },
@@ -53,7 +53,7 @@ function fmt12(time24) {
   return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// main component
 export default function DoctorAppointments() {
   const user = useAuthStore((s) => s.user);
 
@@ -80,7 +80,7 @@ export default function DoctorAppointments() {
   const [docsLoading, setDocsLoading]                   = useState(false);
   const [recordsPatientProfileId, setRecordsPatientProfileId] = useState(null);
 
-  // ── Load: fetch appointments then enrich with slot schedule info ────────────
+  // load: fetch appointments then enrich with slot schedule info
   const load = async () => {
     setLoading(true);
     try {
@@ -178,7 +178,7 @@ export default function DoctorAppointments() {
   const upcomingPageData = upcoming.slice((upcomingPage - 1) * SLOT_PAGE_SIZE, upcomingPage * SLOT_PAGE_SIZE);
   const pastPageData = past.slice((pastPage - 1) * SLOT_PAGE_SIZE, pastPage * SLOT_PAGE_SIZE);
 
-  // ── Docs modal ─────────────────────────────────────────────────────────────
+  // docs modal
   useEffect(() => {
     if (!recordsAppt) { setLinkedDocs([]); setRecordsPatientProfileId(null); return; }
     const ids = new Set((recordsAppt.patientMedicalDocumentIds ?? []).map(String));
@@ -196,7 +196,7 @@ export default function DoctorAppointments() {
       .finally(() => setDocsLoading(false));
   }, [recordsAppt]);
 
-  // ── Filtered appointments for detail view ──────────────────────────────────
+  // filtered appointments for detail view
   const detailAppointments = useMemo(() => {
     if (!selectedSlot) return [];
     let list = [...selectedSlot.appointments];
@@ -220,7 +220,7 @@ export default function DoctorAppointments() {
     setView('detail');
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // render
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Spin size="large" /></div>;
   }
@@ -319,7 +319,7 @@ export default function DoctorAppointments() {
   );
 }
 
-// ── Slot Overview ─────────────────────────────────────────────────────────────
+// slot overview
 function SlotOverview({
   slots,
   upcoming,
@@ -439,7 +439,7 @@ function SlotOverview({
   );
 }
 
-// ── Slot Card ─────────────────────────────────────────────────────────────────
+// slot card
 function SlotCard({ slot, onOpen }) {
   const pct       = slot.maxTokens > 0 ? slot.bookedTokens / slot.maxTokens : 0;
   const cfg       = SLOT_STATUS_CFG[slot.status] || SLOT_STATUS_CFG.OPEN;
@@ -507,7 +507,7 @@ function SlotCard({ slot, onOpen }) {
   );
 }
 
-// ── Detail View ───────────────────────────────────────────────────────────────
+// detail view
 function DetailView({
   slot, appointments,
   search, setSearch, filterPayment, setFilterPayment, filterStatus, setFilterStatus,
@@ -641,7 +641,7 @@ function DetailView({
   );
 }
 
-// ── Appointment Row ───────────────────────────────────────────────────────────
+// appointment row
 function AppointmentRow({ appt, onVideoCall, onViewDocs, expanded, onToggleExpand, onAppointmentComplete }) {
   const canJoinCall    = appt.status === APPOINTMENT_STATUS.CONFIRMED && appt.type === 'video';
   const hasAttachments = (appt.patientMedicalDocumentIds?.length ?? 0) > 0;

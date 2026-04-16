@@ -6,9 +6,9 @@ const { asyncHandler } = require('../utils/asyncHandler');
 
 const VALID_CATEGORIES = ['prescription', 'lab_report', 'medical_record', 'certificate', 'imaging', 'profile_photo', 'other'];
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// helpers
 
-/** Returns true if the requester is allowed to read the document. */
+// returns true if user can read the document
 const canRead = (doc, user) => {
   if (user.role === 'admin') return true;
   if (doc.uploadedBy.userId === user.id) return true;
@@ -20,21 +20,21 @@ const canRead = (doc, user) => {
   return false;
 };
 
-/** Returns true if the requester is allowed to delete the document. */
+// returns true if user can delete the document
 const canDelete = (doc, user) => {
   if (user.role === 'admin') return true;
   if (doc.uploadedBy.userId === user.id) return true;
   return false;
 };
 
-/** Returns true if the requester is allowed to manage sharing. */
+// returns true if user can manage sharing
 const canShare = (doc, user) => {
   if (user.role === 'admin') return true;
   if (doc.uploadedBy.userId === user.id) return true;
   return false;
 };
 
-// ── Validation schemas ────────────────────────────────────────────────────────
+// validation schemas
 
 const uploadMetaSchema = Joi.object({
   category: Joi.string().valid(...VALID_CATEGORIES).default('other'),
@@ -56,18 +56,10 @@ const shareSchema = Joi.object({
   remove: Joi.array().items(Joi.string()).default([]),
 }).or('add', 'remove');
 
-// ── Controllers ───────────────────────────────────────────────────────────────
+// controllers
 
-/**
- * POST /documents
- * Upload one or more files. At least one file required.
- * Body fields (multipart/form-data):
- *   - files[]        (required, up to 5)
- *   - category       (optional)
- *   - description    (optional)
- *   - appointmentId  (optional)
- *   - visibleTo      (optional — JSON array string or comma-separated userIds)
- */
+// POST /documents — upload one or more files (multipart/form-data)
+// visibleTo can be a JSON array string or comma-separated list of userIds
 const uploadDocuments = asyncHandler(async (req, res) => {
   if (!req.files || req.files.length === 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'At least one file is required');
@@ -109,13 +101,7 @@ const uploadDocuments = asyncHandler(async (req, res) => {
   return res.status(StatusCodes.CREATED).json(docs);
 });
 
-/**
- * GET /documents
- * List all documents the requester can access:
- *   - Admin: all documents
- *   - Others: uploaded by me OR I am in visibleTo
- * Query params: category, appointmentId, page, limit
- */
+// GET /documents — lists docs accessible to the requester
 const listDocuments = asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
@@ -172,12 +158,7 @@ const listDocuments = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * GET /documents/:id
- * Serves the file inline so users can view it directly in the browser.
- * Images: <img src="..." /> — PDFs / docs: <iframe src="..." />
- * The frontend fetches this with axios (responseType: 'blob') and creates an object URL.
- */
+// GET /documents/:id — serves the file inline for browser preview
 const getDocument = asyncHandler(async (req, res) => {
   const doc = await Document.findById(req.params.id);
   if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Document not found');
@@ -193,10 +174,7 @@ const getDocument = asyncHandler(async (req, res) => {
   return res.end(buffer);
 });
 
-/**
- * GET /documents/:id/download
- * Returns the raw file bytes decoded from the stored base64 — browser will download it.
- */
+// GET /documents/:id/download — forces a file attachment download
 const downloadDocument = asyncHandler(async (req, res) => {
   const doc = await Document.findById(req.params.id);
   if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Document not found');
@@ -212,10 +190,7 @@ const downloadDocument = asyncHandler(async (req, res) => {
   return res.end(buffer);
 });
 
-/**
- * DELETE /documents/:id
- * Deletes metadata + the physical file. Only uploader or admin.
- */
+// DELETE /documents/:id — only uploader or admin can delete
 const deleteDocument = asyncHandler(async (req, res) => {
   const doc = await Document.findById(req.params.id);
   if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Document not found');

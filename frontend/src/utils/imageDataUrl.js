@@ -1,9 +1,5 @@
-/**
- * Resize and encode as JPEG data URL so decoded size stays under backend limits (~400KB).
- * @param {File} file
- * @param {{ maxDecodedBytes?: number, maxDimension?: number }} [opts]
- * @returns {Promise<string>}
- */
+// Resizes and encodes a profile photo as a JPEG data URL.
+// Keeps the decoded size under ~400 KB so it stays within backend limits.
 export function fileToProfilePhotoDataUrl(file, opts = {}) {
   const maxDecodedBytes = opts.maxDecodedBytes ?? 380 * 1024;
   const maxDimension = opts.maxDimension ?? 512;

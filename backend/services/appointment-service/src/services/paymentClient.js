@@ -2,27 +2,14 @@ const axios = require('axios');
 const { env } = require('../config/env');
 const logger = require('../config/logger');
 
-/**
- * Payment Service Client
- * Handles payment processing and status management for appointments
- */
-
+// Axios client pointed at common-service's payment endpoints
 const client = axios.create({
   baseURL: env.PAYMENT_SERVICE_URL.replace(/\/$/, ''),
   timeout: 5000
 });
 
-/**
- * Process payment for appointment
- * @param {object} options
- * @param {string} options.appointmentId - Appointment ID
- * @param {number} options.amount - Payment amount
- * @param {string} options.patientId - Patient ID for payment record
- * @param {string} options.doctorId - Doctor ID for payment record
- * @param {string} options.paymentMethod - Payment method (card, upi, etc)
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Payment record with transactionId
- */
+// Creates a Stripe PaymentIntent via common-service.
+// Returns the intent metadata (paymentIntentId, clientSecret, status).
 async function processPayment({
   appointmentId,
   amount,
@@ -32,7 +19,7 @@ async function processPayment({
   authorization
 }) {
   try {
-    // Common service exposes Stripe payment intent endpoints under /intent
+    // common-service routes Stripe through /payments/intent
     const { data } = await client.post(
       '/payments/intent',
       {
@@ -47,7 +34,6 @@ async function processPayment({
       }
     );
 
-    // Return the intent metadata to the caller (paymentIntentId, clientSecret, status, amount)
     return data;
   } catch (error) {
     logger.error({ err: error }, `Failed to process payment for appointment ${appointmentId}`);
@@ -55,13 +41,7 @@ async function processPayment({
   }
 }
 
-/**
- * Get payment status by appointment ID
- * @param {object} options
- * @param {string} options.appointmentId - Appointment ID
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Payment status object
- */
+// Looks up a payment record by appointment ID from common-service.
 async function getPaymentStatus({ appointmentId, authorization }) {
   try {
     const { data } = await client.get(`/payments/appointment/${appointmentId}`, {
@@ -76,14 +56,7 @@ async function getPaymentStatus({ appointmentId, authorization }) {
   }
 }
 
-/**
- * Refund payment (currently not used per requirements - no refund on cancellation)
- * @param {object} options
- * @param {string} options.paymentId - Payment ID to refund
- * @param {string} options.reason - Reason for refund
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Refund record
- */
+// Not used yet (no refunds per requirements), kept for future use.
 async function refundPayment({ paymentId, reason, authorization }) {
   try {
     const { data } = await client.post(
@@ -102,15 +75,7 @@ async function refundPayment({ paymentId, reason, authorization }) {
   }
 }
 
-/**
- * Update payment status (called when payment webhook received)
- * @param {object} options
- * @param {string} options.paymentId - Payment ID
- * @param {string} options.status - New payment status (paid, failed, etc)
- * @param {string} options.transactionId - Transaction reference
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Updated payment record
- */
+// Patches a payment record's status (called from the webhook handler).
 async function updatePaymentStatus({ paymentId, status, transactionId, authorization }) {
   try {
     const { data } = await client.patch(
@@ -129,13 +94,8 @@ async function updatePaymentStatus({ paymentId, status, transactionId, authoriza
   }
 }
 
-/**
- * Retrieve a payment intent by its ID
- * @param {object} options
- * @param {string} options.paymentIntentId - Stripe PaymentIntent ID
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Payment intent object { paymentIntentId, status, amount, ... }
- */
+// Retrieves a Stripe PaymentIntent by ID.
+// common-service wraps the result under data.data, so we unwrap it.
 async function retrievePaymentIntent({ paymentIntentId, authorization }) {
   try {
     const { data } = await client.get(`/payments/intent/${paymentIntentId}`, {
