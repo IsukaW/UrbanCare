@@ -26,4 +26,9 @@ export const userService = {
     const { data } = await userApi.reject(id, message);
     return data.user ?? data;
   },
+
+  async delete(id) {
+    const { data } = await userApi.delete(id);
+    return data;
+  },
 };

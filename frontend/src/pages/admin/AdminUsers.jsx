@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Table, Tag, Typography, Card, Select, Space, Button, Modal, Form, Input } from 'antd';
 import { notify } from '../../utils/notify';
-import { CheckOutlined, CloseOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
 import { userService } from '../../services/common/user.service';
 import useAuthStore from '../../store/authStore';
 import { ROLE_LABELS, ROLE_COLORS } from '../../constants/roles';
@@ -90,6 +90,27 @@ export default function AdminUsers() {
     }
   };
 
+  const handleDelete = (record) => {
+    Modal.confirm({
+      title: `Delete ${record.firstName} ${record.lastName}?`,
+      content: 'This action cannot be undone. The user will be permanently removed.',
+      okText: 'Delete',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setActing(record._id);
+        try {
+          await userService.delete(record._id);
+          notify.success('Deleted', `${record.firstName} ${record.lastName} has been deleted.`);
+          load();
+        } catch (e) {
+          notify.error('Delete failed', e.message);
+        } finally {
+          setActing(null);
+        }
+      },
+    });
+  };
+
   const openEdit = (record) => {
     setEditingUser(record);
     form.setFieldsValue({
@@ -176,9 +197,20 @@ export default function AdminUsers() {
             </>
           )}
           {record._id !== currentUser?._id && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
-              Edit
-            </Button>
+            <>
+              <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+                Edit
+              </Button>
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                loading={acting === record._id}
+                onClick={() => handleDelete(record)}
+              >
+                Delete
+              </Button>
+            </>
           )}
         </Space>
       ),
