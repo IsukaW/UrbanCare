@@ -29,7 +29,7 @@ const { Title, Text } = Typography;
 
 const CANCELLABLE = [APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.PENDING];
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// helpers
 const todayIso = () => new Date().toISOString().split('T')[0];
 
 export default function PatientAppointments() {
@@ -84,14 +84,14 @@ export default function PatientAppointments() {
 
   useEffect(() => { load(); }, []);
 
-  // ── Resolve patient profile once (needed for document APIs) ───────────────
+  // resolve patient profile once (needed for document apis)
   useEffect(() => {
     patientService.getById(user.id)
       .then((profile) => setPatientProfileId(profile._id))
       .catch(() => {}); // non-critical
   }, [user.id]);
 
-  // ── Load linked documents when docsAppt is set ────────────────────────────
+  // load linked documents when docsappt is set
   useEffect(() => {
     if (!docsAppt) { setLinkedDocs([]); return; }
     const linkedIds = new Set((docsAppt.patientMedicalDocumentIds ?? []).map(String));

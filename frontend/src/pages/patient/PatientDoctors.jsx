@@ -15,7 +15,7 @@ import { notify } from '../../utils/notify';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-/** Fetches and displays a doctor profile photo; falls back to icon avatar */
+// fetches the doctor's profile photo and shows it; falls back to an icon avatar
 function DoctorAvatar({ documentId, size = 72 }) {
   const [src, setSrc] = useState(null);
 
@@ -54,7 +54,7 @@ export default function PatientDoctors() {
   const [search, setSearch]           = useState('');
   const [specialty, setSpecialty]     = useState(null);
 
-  // ── Load doctors ──────────────────────────────────────────────────────────
+  // load doctors
   useEffect(() => {
     appointmentService
       .listDoctors()
@@ -66,7 +66,7 @@ export default function PatientDoctors() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Filter doctors when search or specialty changes ───────────────────────
+  // filter doctors when search or specialty changes
   useEffect(() => {
     let result = [...doctors];
 
@@ -87,12 +87,12 @@ export default function PatientDoctors() {
     setFiltered(result);
   }, [search, specialty, doctors]);
 
-  // ── Go to booking form with doctor pre-selected ───────────────────────────
+  // go to booking form with doctor pre-selected
   const handleBook = (doctorId) => {
     navigate(`/patient/appointments/book?doctorId=${doctorId}`);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // render
   return (
     <div className="p-6">
       {/* Header */}

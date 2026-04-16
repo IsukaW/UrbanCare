@@ -14,7 +14,7 @@ const { getDoctors, getDoctorById, getDoctorSchedule, getAvailableSlots, reserve
 const { getPatientById, getPatientMedicalDocuments } = require('../services/patientClient');
 const { processPayment, getPaymentStatus, retrievePaymentIntent } = require('../services/paymentClient');
 
-//validation schemas
+// validation schemas
 
 const searchSchema = Joi.object({
   specialty: Joi.string().min(2).max(100).optional(),
@@ -94,7 +94,7 @@ const listAppointmentSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
 });
 
-//helper functions
+// helpers
 
 const canAccessAppointment = (user, appointment) =>
   user.role === 'admin' || user.id === appointment.patientId || user.id === appointment.doctorId;
@@ -105,9 +105,7 @@ const generateTokenNumber = (weekStartMonday, tokenCount) => {
   return `UC-${weekStr}-${tokenStr}`;
 };
 
- //Search for available doctors with optional filters
- //GET /appointments/search?specialty=&date=
-
+// GET /appointments/search?specialty=&date=
 const searchDoctors = asyncHandler(async (req, res) => {
   const { error, value } = searchSchema.validate(req.query, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -260,7 +258,7 @@ const searchDoctors = asyncHandler(async (req, res) => {
       ...(value.date && {
         requestedDate: doctor.requestedDate,
         weekStartMonday: doctor.weekStartMonday,
-        slotsByDate: doctor.slotsByDate || {}  // All slots grouped by date (YYYY-MM-DD)
+        slotsByDate: doctor.slotsByDate || {}  // slots grouped by date (YYYY-MM-DD)
       })
     }));
 
@@ -271,9 +269,7 @@ const searchDoctors = asyncHandler(async (req, res) => {
   }
 });
 
- //Book an appointment
- //POST /appointments
- 
+// POST /appointments
 const bookAppointment = asyncHandler(async (req, res) => {
   const { error, value } = bookAppointmentSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -395,8 +391,8 @@ const bookAppointment = asyncHandler(async (req, res) => {
       patientPhoneNumber: value.patientPhoneNumber || null,
       createdBy: req.user.id,
       updatedBy: req.user.id,
-      doctorPrescriptionIds: [], // Will be populated in step 8
-      patientMedicalDocumentIds: value.patientMedicalDocumentIds ?? [] // Will be merged in step 9
+      doctorPrescriptionIds: [],
+      patientMedicalDocumentIds: value.patientMedicalDocumentIds ?? []
     });
 
     // 6. Reserve slot in doctor-service
@@ -504,7 +500,6 @@ const bookAppointment = asyncHandler(async (req, res) => {
     // 10. Confirmation notification is intentionally deferred — sent only after payment is confirmed
     //     See confirmPayment handler.
 
-    // 11. Return appointment with details
     const response = {
       ...appointment.toObject(),
       doctorDetails: {
@@ -529,9 +524,7 @@ const bookAppointment = asyncHandler(async (req, res) => {
   }
 });
 
- //List appointments with role-based filtering
- //GET /appointments?patientId=&doctorId=&status=
-
+// GET /appointments?patientId=&doctorId=&status=
 const listAppointments = asyncHandler(async (req, res) => {
   const { error, value } = listAppointmentSchema.validate(req.query, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -597,9 +590,7 @@ const listAppointments = asyncHandler(async (req, res) => {
 });
 
 
- //Get appointment details by ID
- //GET /appointments/{id}
-
+// GET /appointments/:id
 const getAppointmentById = asyncHandler(async (req, res) => {
   const appointment = await Appointment.findById(req.params.id).lean();
   if (!appointment) {
@@ -613,9 +604,7 @@ const getAppointmentById = asyncHandler(async (req, res) => {
   return res.status(StatusCodes.OK).json(appointment);
 });
 
- //Get appointment status
- //GET /appointments/{id}/status
-
+// GET /appointments/:id/status
 const getAppointmentStatus = asyncHandler(async (req, res) => {
   const appointment = await Appointment.findById(req.params.id).lean();
   if (!appointment) {
@@ -638,10 +627,8 @@ const getAppointmentStatus = asyncHandler(async (req, res) => {
 });
 
 
-//Update appointment details (date, time, reason)
-//PUT /appointments/{id}
-//Only allowed for pending/confirmed appointments
-
+// PUT /appointments/:id — restricted to pending/confirmed for slot/reason changes;
+// doctors can save prescription/consultation on completed appointments too
 const updateAppointment = asyncHandler(async (req, res) => {
   const { error, value } = updateAppointmentSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -827,8 +814,7 @@ const updateAppointment = asyncHandler(async (req, res) => {
 });
 
 
-//Request appointment cancellation (Patient initiates)
-
+// POST /appointments/:id/request-cancellation — patient initiates
 const requestCancellation = asyncHandler(async (req, res) => {
   const { error, value } = requestCancellationSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -885,9 +871,7 @@ const requestCancellation = asyncHandler(async (req, res) => {
   });
 });
 
- //Admin approve cancellation or offer reschedule
- //PUT /appointments/{id}/approve-cancellation
- 
+// PUT /appointments/:id/approve-cancellation — admin only
 const approveCancellation = asyncHandler(async (req, res) => {
   // Admin only
   if (req.user.role !== 'admin') {
@@ -1021,9 +1005,7 @@ const approveCancellation = asyncHandler(async (req, res) => {
   });
 });
 
- //Admin offer reschedule (standalone endpoint)
- //POST /appointments/{id}/offer-reschedule
-
+// POST /appointments/:id/offer-reschedule — admin only
 const offerReschedule = asyncHandler(async (req, res) => {
   // Admin only
   if (req.user.role !== 'admin') {
@@ -1120,9 +1102,7 @@ const offerReschedule = asyncHandler(async (req, res) => {
 });
 
 
- //Patient confirm rescheduled appointment
- //PUT /appointments/{id}/confirm-reschedule
- 
+// PUT /appointments/:id/confirm-reschedule
 const confirmReschedule = asyncHandler(async (req, res) => {
   const appointment = await Appointment.findById(req.params.id);
   if (!appointment) {

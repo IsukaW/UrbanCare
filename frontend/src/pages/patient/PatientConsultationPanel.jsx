@@ -20,9 +20,7 @@ import useAuthStore from '../../store/authStore';
 
 const { Text } = Typography;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Category label / colour map for documents
-// ─────────────────────────────────────────────────────────────────────────────
+// category label / colour map for documents
 const CATEGORY_CFG = {
   lab_report:     { label: 'Lab Report',     color: 'purple'  },
   prescription:   { label: 'Prescription',   color: 'blue'    },
@@ -31,12 +29,8 @@ const CATEGORY_CFG = {
   other:          { label: 'Other',          color: 'default' },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main component
-// Props:
-//   appt             – appointment object (incl. consultationNotes, prescription)
-//   patientProfileId – resolved patient MongoDB _id (may be null on first render)
-// ─────────────────────────────────────────────────────────────────────────────
+// PatientConsultationPanel — shows appointment details for a patient
+// Props: appt (appointment object), patientProfileId (MongoDB _id, may be null on first render)
 export default function PatientConsultationPanel({ appt, patientProfileId }) {
   const user = useAuthStore((s) => s.user);
 
@@ -59,7 +53,7 @@ export default function PatientConsultationPanel({ appt, patientProfileId }) {
   );
   const hasPrescription = medications.length > 0;
 
-  // ── Fetch doctor profile on mount ─────────────────────────────────────────
+  // fetch doctor profile on mount
   useEffect(() => {
     let cancelled = false;
     setLoadingDoctor(true);
@@ -79,7 +73,7 @@ export default function PatientConsultationPanel({ appt, patientProfileId }) {
     return () => { cancelled = true; };
   }, [appt.doctorId, user.id]);
 
-  // ── Lazy-load documents when Documents tab is opened ──────────────────────
+  // lazy-load documents when documents tab is opened
   const loadDocs = useCallback(async () => {
     if (docsLoaded || !patientProfileId) return;
     const linkedIds = new Set((appt.patientMedicalDocumentIds ?? []).map(String));
@@ -104,7 +98,7 @@ export default function PatientConsultationPanel({ appt, patientProfileId }) {
     if (activeTab === 'docs') loadDocs();
   }, [activeTab, loadDocs]);
 
-  // ── PDF download ───────────────────────────────────────────────────────────
+  // pdf download
   const handleDownloadPDF = async () => {
     setPdfLoading(true);
     try {
@@ -116,7 +110,7 @@ export default function PatientConsultationPanel({ appt, patientProfileId }) {
     }
   };
 
-  // ── Build tab items ────────────────────────────────────────────────────────
+  // build tab items
   const tabItems = [
     {
       key: 'doctor',
@@ -233,9 +227,7 @@ export default function PatientConsultationPanel({ appt, patientProfileId }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Doctor Info
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: doctor info
 function DoctorInfoTab({ doctor, loading, appt }) {
   if (loading) return <div className="flex justify-center py-10"><Spin /></div>;
 
@@ -304,9 +296,7 @@ function DoctorInfoTab({ doctor, loading, appt }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Consultation Summary
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: consultation summary
 function ConsultationTab({ consultation, hasConsultation }) {
   if (!hasConsultation) {
     return (
@@ -370,9 +360,7 @@ function ConsultationTab({ consultation, hasConsultation }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Prescription
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: prescription
 function PrescriptionTab({ medications, hasPrescription }) {
   if (!hasPrescription) {
     return (
@@ -428,9 +416,7 @@ function PrescriptionTab({ medications, hasPrescription }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Medical History (read-only timeline)
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: medical history (read-only timeline)
 function HistoryTab({ patientData }) {
   if (!patientData) {
     return <div className="flex justify-center py-10"><Spin tip="Loading history…" /></div>;
@@ -526,9 +512,7 @@ function HistoryTab({ patientData }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Documents
-// ─────────────────────────────────────────────────────────────────────────────
+// tab: documents
 function DocumentsTab({ docs, loading, patientProfileId, patientLoading }) {
   if (patientLoading || loading) {
     return <div className="flex justify-center py-10"><Spin tip="Loading documents…" /></div>;
@@ -624,9 +608,7 @@ function DocumentsTab({ docs, loading, patientProfileId, patientLoading }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PDF Generator — Patient Copy (green-branded, dynamically imported)
-// ─────────────────────────────────────────────────────────────────────────────
+// pdf generator — patient copy (green-branded, dynamically imported)
 async function generatePatientPDF(appt, patient, consultation, medications) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -640,7 +622,7 @@ async function generatePatientPDF(appt, patient, consultation, medications) {
   const rightEdge = pageW - margin;
   let y = 0;
 
-  // ── Header ─────────────────────────────────────────────────────────────────
+  // header
   doc.setFillColor(5, 150, 105);
   doc.rect(0, 0, pageW, 48, 'F');
   doc.setFillColor(4, 120, 87);
@@ -668,7 +650,7 @@ async function generatePatientPDF(appt, patient, consultation, medications) {
   y = 58;
   doc.setTextColor(15, 23, 42);
 
-  // ── Patient Info Box ───────────────────────────────────────────────────────
+  // patient info box
   doc.setFillColor(236, 253, 245);
   doc.roundedRect(margin, y - 3, pageW - 2 * margin, 38, 2, 2, 'F');
   doc.setDrawColor(167, 243, 208);
@@ -702,7 +684,7 @@ async function generatePatientPDF(appt, patient, consultation, medications) {
   });
   y += 44;
 
-  // ── Consultation Notes ─────────────────────────────────────────────────────
+  // consultation notes
   const cFields = [
     ['Diagnosis',       consultation.diagnosis],
     ['Observations',    consultation.observations],
@@ -736,7 +718,7 @@ async function generatePatientPDF(appt, patient, consultation, medications) {
     y += 4;
   }
 
-  // ── Prescription ───────────────────────────────────────────────────────────
+  // prescription
   const meds = medications.filter((m) => m.name?.trim?.());
   if (meds.length > 0) {
     doc.setFontSize(10.5);
@@ -774,7 +756,7 @@ async function generatePatientPDF(appt, patient, consultation, medications) {
     y = doc.lastAutoTable.finalY + 8;
   }
 
-  // ── Footer ─────────────────────────────────────────────────────────────────
+  // footer
   const footerY = pageH - 22;
   doc.setDrawColor(209, 213, 219);
   doc.line(margin, footerY - 2, rightEdge, footerY - 2);

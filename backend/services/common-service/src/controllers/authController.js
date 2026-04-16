@@ -122,19 +122,19 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── Password Reset helpers ───────────────────────────────────────────────────
+// password reset
 
 const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const RESET_TOKEN_TTL = '10m';     // JWT used to authorise the final reset step
 
-/** Generate a cryptographically random 6-digit OTP string */
+// generates a cryptographically random 6-digit OTP
 const generateOtp = () => String(crypto.randomInt(100000, 999999));
 
-/** Issue a short-lived JWT that only authorises the reset-password endpoint */
+// short-lived JWT that only unlocks the reset-password endpoint
 const issueResetToken = (email) =>
   jwt.sign({ email, purpose: 'password_reset' }, env.JWT_SECRET, { expiresIn: RESET_TOKEN_TTL });
 
-// ─── Schema definitions ───────────────────────────────────────────────────────
+// validation schemas for password reset flow
 
 const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required()
@@ -158,13 +158,8 @@ const resetPasswordSchema = Joi.object({
     })
 });
 
-// ─── Controllers ─────────────────────────────────────────────────────────────
-
-/**
- * POST /auth/forgot-password
- * If the email exists, generate an OTP and send it. Always returns 200
- * (even for unknown emails) to prevent user enumeration.
- */
+// POST /auth/forgot-password
+// Always returns 200 even for unknown emails to prevent user enumeration.
 const forgotPassword = asyncHandler(async (req, res) => {
   const { error, value } = forgotPasswordSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -289,11 +284,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * POST /auth/verify-code
- * Validate the OTP. On success return a short-lived reset token that the
- * client must send to /auth/reset-password.
- */
+// POST /auth/verify-code
+// Validates OTP and returns a short-lived reset token for /auth/reset-password.
 const verifyResetCode = asyncHandler(async (req, res) => {
   const { error, value } = verifyCodeSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
@@ -326,10 +318,8 @@ const verifyResetCode = asyncHandler(async (req, res) => {
   return res.status(StatusCodes.OK).json({ resetToken });
 });
 
-/**
- * POST /auth/reset-password
- * Verify the reset token (issued by /auth/verify-code) and update the password.
- */
+// POST /auth/reset-password
+// Verifies the reset token from /auth/verify-code and updates the password.
 const resetPassword = asyncHandler(async (req, res) => {
   const { error, value } = resetPasswordSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {

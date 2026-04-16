@@ -8,12 +8,7 @@ const client = axios.create({
   timeout: 5000
 });
 
-/**
- * Get all doctors (with optional filters)
- * @param {object} options
- * @param {string} options.authorization - Bearer token from request header
- * @returns {Promise<Array>} - Array of doctor documents
- */
+// Fetches all doctor profiles. Returns [] on failure.
 async function getDoctors({ authorization }) {
   try {
     const { data } = await client.get('/doctors', {
@@ -28,13 +23,7 @@ async function getDoctors({ authorization }) {
   }
 }
 
-/**
- * Get doctor by ID
- * @param {object} options
- * @param {string} options.doctorId - Doctor document ID
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Doctor document
- */
+// Fetches a single doctor by their profile _id.
 async function getDoctorById({ doctorId, authorization }) {
   try {
     const { data } = await client.get(`/doctors/${doctorId}`, {
@@ -49,14 +38,8 @@ async function getDoctorById({ doctorId, authorization }) {
   }
 }
 
-/**
- * Get available slots for a doctor for a specific week
- * @param {object} options
- * @param {string} options.doctorId - Doctor document ID
- * @param {string} options.weekStartMonday - Week start date in YYYY-MM-DD format
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<Array>} - Available slots for that week
- */
+// Returns slots that still have capacity for the given week.
+// Returns [] rather than throwing so a missing schedule doesn't blow up search.
 async function getAvailableSlots({ doctorId, weekStartMonday, authorization }) {
   try {
     const { data } = await client.get(`/doctors/${doctorId}/slots/available`, {
@@ -74,14 +57,7 @@ async function getAvailableSlots({ doctorId, weekStartMonday, authorization }) {
   }
 }
 
-/**
- * Get doctor's weekly schedule for a specific week
- * @param {object} options
- * @param {string} options.doctorId - Doctor document ID
- * @param {string} options.weekStartMonday - Week start date in YYYY-MM-DD format
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<Array>} - Doctor's slots for that week
- */
+// Fetches the full weekly schedule for a doctor (reserved + available slots).
 async function getDoctorSchedule({ doctorId, weekStartMonday, authorization }) {
   try {
     const { data } = await client.get(`/doctors/${doctorId}/schedule`, {
@@ -97,14 +73,7 @@ async function getDoctorSchedule({ doctorId, weekStartMonday, authorization }) {
   }
 }
 
-/**
- * Reserve a slot token for an appointment
- * @param {object} options
- * @param {string} options.doctorId - Doctor document ID
- * @param {string} options.slotId - Slot ID to reserve
- * @param {string} options.authorization - Bearer token from request header
- * @returns {Promise<object>} - Updated slot with reservation info
- */
+// Reserves one token on the given slot.
 async function reserveSlot({ doctorId, slotId, authorization }) {
   try {
     const { data } = await client.post(
@@ -123,14 +92,7 @@ async function reserveSlot({ doctorId, slotId, authorization }) {
   }
 }
 
-/**
- * Release a reserved slot token (e.g., when appointment is cancelled)
- * @param {object} options
- * @param {string} options.doctorId - Doctor document ID
- * @param {string} options.slotId - Slot ID to release
- * @param {string} options.authorization - Bearer token from request header
- * @returns {Promise<object>} - Updated slot
- */
+// Releases a previously reserved token (e.g. on cancellation).
 async function releaseSlot({ doctorId, slotId, authorization }) {
   try {
     const { data } = await client.post(
@@ -149,14 +111,8 @@ async function releaseSlot({ doctorId, slotId, authorization }) {
   }
 }
 
-/**
- * Get doctor's prescriptions for an appointment/patient
- * @param {object} options
- * @param {string} options.doctorId - Doctor document ID
- * @param {string} options.appointmentId - Appointment ID (optional)
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<Array>} - Array of prescriptions
- */
+// Returns prescriptions for a doctor. Optional appointmentId filter.
+// Returns [] if none exist yet.
 async function getDoctorPrescriptions({ doctorId, appointmentId, authorization }) {
   try {
     // Note: Prescription endpoint structure may vary - this can be adapted

@@ -9,10 +9,7 @@ export function isValidScheduleDate(value) {
   return typeof value === 'string' && DATE_PATTERN.test(value.trim());
 }
 
-/**
- * @param {{ date: unknown, startTime: unknown, endTime: unknown }} s
- * @returns {{ date: string, startTime: string, endTime: string }}
- */
+// Validates and normalises a single slot object before sending to the API.
 export function normalizeScheduleSlotForApi(s) {
   const date = String(s.date ?? '').trim();
   const startTime = String(s.startTime ?? '').trim();
@@ -36,18 +33,13 @@ export function normalizeScheduleSlotForApi(s) {
   };
 }
 
-/**
- * @param {Array<{ date?: unknown, startTime?: unknown, endTime?: unknown }>} slots
- * @returns {Array<{ date: string, startTime: string, endTime: string }>}
- */
+// Validates and normalises every slot in an array. Returns [] if input is not an array.
 export function normalizeScheduleArrayForApi(slots) {
   if (!Array.isArray(slots)) return [];
   return slots.map(normalizeScheduleSlotForApi);
 }
 
-/**
- * Coerce API / Mongo lean shapes for UI (string numbers, etc.).
- */
+// Coerces API / Mongo lean shapes (string numbers etc.) into the UI slot format.
 export function coerceSlotFromProfile(s) {
   if (!s || typeof s !== 'object') return null;
   const date = String(s.date ?? '').trim();
@@ -71,7 +63,8 @@ export function coerceSlotFromProfile(s) {
   };
 }
 
-/** Slots from `weeklyAvailability[].slots` or legacy `schedule` for grid display. */
+// Reads slots from weeklyAvailability[].slots (or legacy schedule) and returns
+// them in a normalised form ready for the schedule grid.
 export function slotsFromProfileForUi(slots) {
   if (!Array.isArray(slots)) return [];
   return slots

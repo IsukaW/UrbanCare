@@ -22,7 +22,7 @@ import { notify } from '../../utils/notify';
 
 const { Title, Text, Paragraph } = Typography;
 
-// ── Static data ───────────────────────────────────────────────────────────────
+// static data
 
 const BODY_AREAS = [
   { id: 'Head',    emoji: '🧠', label: 'Head' },
@@ -79,7 +79,7 @@ const STEP_ITEMS = [
   { title: 'Results' },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// helpers
 
 function severityColor(v) {
   if (v <= 3) return '#22c55e';
@@ -87,7 +87,7 @@ function severityColor(v) {
   return '#ef4444';
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// component
 
 export default function SymptomChecker() {
   const [step, setStep] = useState(0);
@@ -101,7 +101,7 @@ export default function SymptomChecker() {
   const [result, setResult] = useState(null);
   const customInputRef = useRef(null);
 
-  // ── State helpers ──────────────────────────────────────────────────────────
+  // state helpers
 
   const toggleArea = (id) => {
     const willSelect = !selectedAreas.includes(id);
@@ -170,7 +170,7 @@ export default function SymptomChecker() {
     !!(duration && ageGroup),
   ][step] ?? true;
 
-  // ── Step renders ───────────────────────────────────────────────────────────
+  // step renders
 
   const renderStep0 = () => (
     <div>
@@ -597,7 +597,7 @@ export default function SymptomChecker() {
     );
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // render
 
   const isResultStep = step === 3;
 

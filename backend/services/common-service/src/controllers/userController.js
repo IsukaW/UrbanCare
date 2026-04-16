@@ -243,4 +243,18 @@ const rejectUser = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { getUserById, updateUserById, getAllUsers, approveUser, rejectUser };
+const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+
+  if (req.user.id === user._id.toString()) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You cannot delete your own account');
+  }
+
+  await user.deleteOne();
+  return res.status(StatusCodes.OK).json({ message: 'User deleted successfully' });
+});
+
+module.exports = { getUserById, updateUserById, getAllUsers, approveUser, rejectUser, deleteUser };

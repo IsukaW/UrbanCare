@@ -24,7 +24,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
   const [micMuted, setMicMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
 
-  // ── Settings panel state ──────────────────────────────────────────────────
+  // settings panel state
   const [showSettings, setShowSettings] = useState(false);
   const [cameras, setCameras] = useState([]);
   const [mics, setMics] = useState([]);
@@ -32,7 +32,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
   const [activeMicId, setActiveMicId] = useState('');
   const [switching, setSwitching] = useState(false);
 
-  // ── Internal cleanup ──────────────────────────────────────────────────────
+  // internal cleanup
   const cleanup = useCallback(async () => {
     if (!activeRef.current) return;
     activeRef.current = false;
@@ -45,7 +45,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
     clientRef.current = null;
   }, []);
 
-  // ── Load available devices ────────────────────────────────────────────────
+  // load available devices
   const loadDevices = useCallback(async () => {
     try {
       const [camList, micList] = await Promise.all([
@@ -57,7 +57,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
     } catch (_) {}
   }, []);
 
-  // ── Join channel ──────────────────────────────────────────────────────────
+  // join channel
   const join = useCallback(async () => {
     const attemptId = joinAttemptRef.current;
     try {
@@ -113,7 +113,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
     }
   }, [channelName, role, loadDevices]);
 
-  // ── Leave ─────────────────────────────────────────────────────────────────
+  // leave
   const leave = useCallback(async () => {
     await cleanup();
     setJoined(false);
@@ -121,7 +121,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
     onLeave?.();
   }, [cleanup, onLeave]);
 
-  // ── Mic toggle ────────────────────────────────────────────────────────────
+  // mic toggle
   const toggleMic = useCallback(async () => {
     const { audio } = localTracksRef.current;
     if (!audio) return;
@@ -129,7 +129,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
     setMicMuted((prev) => !prev);
   }, [micMuted]);
 
-  // ── Camera toggle ─────────────────────────────────────────────────────────
+  // camera toggle
   const toggleCam = useCallback(async () => {
     const { video } = localTracksRef.current;
     if (!video) return;
@@ -137,7 +137,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
     setCamOff((prev) => !prev);
   }, [camOff]);
 
-  // ── Switch camera device ──────────────────────────────────────────────────
+  // switch camera device
   const switchCamera = useCallback(async (deviceId) => {
     const { video } = localTracksRef.current;
     if (!video || switching) return;
@@ -149,7 +149,7 @@ export default function VideoCall({ channelName, role = 'publisher', onLeave }) 
     setSwitching(false);
   }, [switching]);
 
-  // ── Switch microphone device ──────────────────────────────────────────────
+  // switch microphone device
   const switchMic = useCallback(async (deviceId) => {
     const { audio } = localTracksRef.current;
     if (!audio || switching) return;

@@ -2,30 +2,14 @@ const axios = require('axios');
 const { env } = require('../config/env');
 const logger = require('../config/logger');
 
-/**
- * Common Service Client
- * Handles notifications and document operations from common-service
- */
-
+// Axios client for common-service (notifications, documents)
 const client = axios.create({
   baseURL: env.COMMON_SERVICE_URL.replace(/\/$/, ''),
   timeout: 5000
 });
 
-/**
- * Send appointment confirmation notification
- * @param {object} options
- * @param {string} options.email - Recipient email address
- * @param {string} options.phoneNumber - Recipient phone number
- * @param {string} options.appointmentId - Appointment ID
- * @param {string} options.scheduledAt - Appointment date/time
- * @param {string} options.doctorName - Doctor's name
- * @param {string} options.doctorSpecialty - Doctor's specialty
- * @param {string} options.tokenNumber - Appointment token
- * @param {string} options.type - Appointment type (video/in-person)
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Notification record
- */
+// Sends email + SMS confirmation after a successful payment.
+// Failures are swallowed so a broken email provider never kills the booking flow.
 async function sendAppointmentConfirmationNotification({
   email,
   phoneNumber,
@@ -38,7 +22,6 @@ async function sendAppointmentConfirmationNotification({
   authorization
 }) {
   try {
-    // ── Format date ─────────────────────────────────────────────────────────
     const dateObj = new Date(scheduledAt);
     const formattedDate = dateObj.toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -49,7 +32,6 @@ async function sendAppointmentConfirmationNotification({
     const appointmentType = type === 'video' ? 'Video Consultation' : 'In-Person Visit';
     const typeIcon = type === 'video' ? '🎥' : '🏥';
 
-    // ── HTML Email ──────────────────────────────────────────────────────────
     const htmlBody = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -168,7 +150,7 @@ async function sendAppointmentConfirmationNotification({
 </body>
 </html>`;
 
-    // ── Plain-text fallback ─────────────────────────────────────────────────
+    // plain-text fallback for email clients that don't render HTML
     const textBody = [
       'APPOINTMENT CONFIRMED — UrbanCare',
       '',
@@ -187,7 +169,7 @@ async function sendAppointmentConfirmationNotification({
       'UrbanCare Healthcare'
     ].join('\n');
 
-    // ── SMS (concise, under 160 chars) ─────────────────────────────────────
+    // keep SMS under 160 chars
     const smsBody = `UrbanCare: Appt CONFIRMED! Token: ${tokenNumber} | ${doctorName} | ${formattedDate} ${formattedTime} | ${appointmentType} | Payment: LKR 500 paid.`;
 
     const promises = [];
@@ -229,16 +211,7 @@ async function sendAppointmentConfirmationNotification({
   }
 }
 
-/**
- * Send appointment status update notification
- * @param {object} options
- * @param {string} options.email - Recipient email
- * @param {string} options.appointmentId - Appointment ID
- * @param {string} options.status - New appointment status
- * @param {string} options.message - Custom message
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<void>}
- */
+// Sends a status-change email. Silently skips if no email is provided.
 async function sendAppointmentStatusNotification({
   email,
   appointmentId,
@@ -289,17 +262,7 @@ async function sendAppointmentStatusNotification({
   }
 }
 
-/**
- * Send cancellation request notification to admin
- * @param {object} options
- * @param {string} options.appointmentId - Appointment ID
- * @param {string} options.patientId - Patient ID
- * @param {string} options.doctorName - Doctor name
- * @param {string} options.scheduledAt - Appointment date
- * @param {string} options.reason - Cancellation reason
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<void>}
- */
+// Alerts admin when a patient requests a cancellation.
 async function sendCancellationRequestNotification({
   appointmentId,
   patientId,
@@ -336,13 +299,7 @@ Please review and approve/offer reschedule.
   }
 }
 
-/**
- * Get document details from common-service
- * @param {object} options
- * @param {string} options.documentId - Document ID in common-service
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Document details
- */
+// Fetches a single document from common-service.
 async function getDocument({ documentId, authorization }) {
   try {
     const { data } = await client.get(`/documents/${documentId}`, {
@@ -357,14 +314,7 @@ async function getDocument({ documentId, authorization }) {
   }
 }
 
-/**
- * Get prescription/documents related to a doctor
- * @param {object} options
- * @param {string} options.doctorId - Doctor ID
- * @param {string} options.category - Document category (e.g., 'prescription')
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<Array>} - Array of documents
- */
+// Fetches documents linked to a doctor (defaults to prescriptions).
 async function getDoctorDocuments({ doctorId, category = 'prescription', authorization }) {
   try {
     const { data } = await client.get('/documents', {
@@ -383,14 +333,7 @@ async function getDoctorDocuments({ doctorId, category = 'prescription', authori
   }
 }
 
-/**
- * List patient's medical documents
- * @param {object} options
- * @param {string} options.patientId - Patient ID
- * @param {string} options.category - Document category filter (optional)
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<Array>} - Array of documents
- */
+// Fetches documents linked to a patient, with optional category filter.
 async function getPatientDocuments({ patientId, category, authorization }) {
   try {
     const params = { linkedPatientId: patientId };

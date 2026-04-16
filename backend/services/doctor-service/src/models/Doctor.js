@@ -7,7 +7,7 @@ const doctorSchema = new mongoose.Schema(
     specialization: { type: String, required: true, trim: true },
     qualifications: { type: [String], default: [] },
     yearsOfExperience: { type: Number, min: 0, default: 0 },
-    /** Document _id from common-service — set after the doctor uploads a profile photo */
+    // document _id from common-service, set when the doctor uploads a photo
     profilePhotoDocumentId: { type: String, default: null }
   },
   {

@@ -2,23 +2,13 @@ const axios = require('axios');
 const { env } = require('../config/env');
 const logger = require('../config/logger');
 
-/**
- * Patient Service Client
- * Handles all communication with patient-service for patient data and medical records
- */
-
+// Axios client for calls to patient-service
 const client = axios.create({
   baseURL: env.PATIENT_SERVICE_URL.replace(/\/$/, ''),
   timeout: 5000
 });
 
-/**
- * Get patient by ID (with medical history)
- * @param {object} options
- * @param {string} options.patientId - Patient document ID
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<object>} - Patient document
- */
+// Fetches a patient profile by document _id.
 async function getPatientById({ patientId, authorization }) {
   try {
     const { data } = await client.get(`/patients/${patientId}`, {
@@ -33,13 +23,7 @@ async function getPatientById({ patientId, authorization }) {
   }
 }
 
-/**
- * Get patient's medical documents/records from common-service via patient-service
- * @param {object} options
- * @param {string} options.patientId - Patient document ID
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<Array>} - Array of medical documents
- */
+// Returns all documents linked to the patient. Returns [] on failure.
 async function getPatientMedicalDocuments({ patientId, authorization }) {
   try {
     const { data } = await client.get(`/patients/${patientId}/documents`, {
@@ -54,13 +38,7 @@ async function getPatientMedicalDocuments({ patientId, authorization }) {
   }
 }
 
-/**
- * Get patient's medical history
- * @param {object} options
- * @param {string} options.patientId - Patient document ID
- * @param {string} options.authorization - Bearer token
- * @returns {Promise<Array>} - Array of medical history entries
- */
+// Returns the patient's medical history array. Returns [] on failure.
 async function getPatientMedicalHistory({ patientId, authorization }) {
   try {
     const { data } = await client.get(`/patients/${patientId}`, {
